@@ -4,8 +4,8 @@ Synthetic Sheffield
 
 import numpy as np
 import pandas as pd
+import os
 import geopandas as gpd
-import os 
 from scipy import stats
 import scipy.optimize
 from pyproj import CRS
@@ -21,58 +21,63 @@ import attractivity_modelling
 import path_querying
 import fractal_working
 
-#Importing shape files--------------------------------------------------------
+
+#Importing files---------------------------------------------------------------
+#Graph
 sheff_OShighways = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\Workshop_2_data\Sheffield_OA.shp"))
-sheff = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\Workshop_2_data\Sheffield_Network.gdb"))
+#sheff = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\Workshop_2_data\Sheffield_Network.gdb"))
+
+#Shape
 sheff_lsoa_shape = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\shapefiles\Sheffield_lsoa11.shp"))
 sheff_oa_shape = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\shapefiles\Sheffield_oa11.shp"))
-sheff_shape = sheff_lsoa_shape
 
 
 
-income_params, edu_counts, edu_ratios = attractivity_modelling.attractivity()
+#Population
+sheff_lsoa_pop = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS101EW_lsoa11.csv"))
+sheff_lsoa_pop['KS101EW0001'] = pd.to_numeric(sheff_lsoa_pop['KS101EW0001']) #Count: All categories:sex
+sheff_oa_pop = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS101EW_oa11.csv"))
+sheff_oa_pop['KS101EW0001'] = pd.to_numeric(sheff_oa_pop['KS101EW0001']) #Count: All categories:sex
 
 
-def attractivity_sampler(oa):
-    """
-    Parameters
-    ----------
-    oa : Integer of oa
+#Income
+sheff_lsoa_income = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Individual LSOA Income Estimate\E37000040\spatial\E37000040.shp"))
+#LSOA Income data includes extra LSOA that are not in Sheffield City region, these should be removed.
+ids = sheff_lsoa_income['lsoa11cd'].isin(sheff_lsoa_pop['GeographyCode'].values)
+ids = np.where(ids==True)
+sheff_lsoa_income = sheff_lsoa_income.iloc[ids]
 
-    Returns
-    -------
-    attractivity 
+#Education
+sheff_lsoa_education = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS501EW_lsoa11.csv"))
 
-    """
-    
-    edu = np.random.choice(4, size = 1, p=edu_ratios[oa]) #where p values are effectively the ratio of people with a given education level
-    income = stats.beta.rvs(income_params[oa, 0], income_params[oa, 1], loc = income_params[oa, 2], scale = income_params[oa, 3], size=1)
-    
-    attractivity = np.power(income, -edu)
-    
-    return attractivity
-
-
-#Loading Graph ---------------------------------------------------------------
-#Getting drivable streets in sheffield
-place_name = "Sheffield, UK"
-graph = ox.graph_from_place(place_name, network_type = 'drive')
-#graph = ox.graph_from_file() # create graph from OSM data in XML file
-nodes, edges = ox.graph_to_gdfs(graph, nodes=True, edges=True) #Convert graph int geodataframe
-crs = CRS.from_string("epsg:27700")#convert data into same co-ordinate system as lsoa data
-graph_proj = ox.project_graph(graph, to_crs=crs)
-nodes_proj, edges_proj = ox.graph_to_gdfs(graph_proj, nodes=True, edges=True) #Convert graph into UTM zone 30 format (with m units)
-
-
+#------------------------------------------------------------------------------
 
 
 
 
 
 #Setting indices -------------------------------------------------------------
-s = 0.1
+s = 0.2
 s = int(s*  len(sheff_lsoa_shape)) 
 idx = np.round(np.linspace(0, len(sheff_lsoa_shape) - 1, s)).astype(int) #Indexing s spaced from array
+
+
+#Generate income and education distributions from OA/LSOA
+income_params, edu_counts, edu_ratios = attractivity_modelling.attractivity(sheff_lsoa_shape, sheff_lsoa_pop, sheff_lsoa_income, sheff_lsoa_education, idx)
+                                                                   
+
+def load_graph():
+        #Loading Graph ---------------------------------------------------------------
+    #Getting drivable streets in sheffield
+    place_name = "Sheffield, UK"
+    graph = ox.graph_from_place(place_name, network_type = 'drive')
+    #graph = ox.graph_from_file() # create graph from OSM data in XML file
+    nodes, edges = ox.graph_to_gdfs(graph, nodes=True, edges=True) #Convert graph int geodataframe
+    crs = CRS.from_string("epsg:27700")#convert data into same co-ordinate system as lsoa data
+    graph_proj = ox.project_graph(graph, to_crs=crs)
+    nodes_proj, edges_proj = ox.graph_to_gdfs(graph_proj, nodes=True, edges=True) #Convert graph into UTM zone 30 format (with m units)
+    return graph_proj 
+graph_proj = load_graph()
 
 
 #Sampling coordinates and attractivities --------------------------------------
@@ -84,15 +89,15 @@ origin=[]
 target=[]
 for i in range(len(idx)): #Loop across  OAs    
     point1s.append(path_querying.get_random_point_in_polygon(sheff_lsoa_shape['geometry'][idx[i]]))
-    attractivity1[i] = attractivity_sampler(i)
+    attractivity1[i] = attractivity_modelling.attractivity_sampler(i, edu_ratios, income_params)
     origin.append((point1s[i].x, point1s[i].y))
     
     point2s.append(path_querying.get_random_point_in_polygon(sheff_lsoa_shape['geometry'][idx[i]]))                     
-    attractivity2[i] = attractivity_sampler(i)
+    attractivity2[i] = attractivity_modelling.attractivity_sampler(i, edu_ratios, income_params)
     target.append((point2s[i].x, point2s[i].y))
+
 all_samples = origin + target
 all_samples = pd.DataFrame(all_samples, columns = ['x-coord', 'y-coord'])
-
 all_attractivity = np.concatenate((attractivity1, attractivity1) , axis=0)
 attractivity_powerlaw = powerlaw.Fit(all_attractivity)
 alpha = attractivity_powerlaw.alpha
@@ -122,10 +127,6 @@ med_paths = sorted(paths)
 med_paths = med_paths[int(len(med_paths)/2)]
 
 
-
-
-
-
 #Fractal Dimension, D ---------------------------------------------------------
 """
 Graph may require some intuition to fit the linear regression through certain points
@@ -150,19 +151,16 @@ ax.set_aspect(1)
 ax.set_xlabel('Box Size')
 ax.set_ylabel('Number of boxes')
 
-#Playing around with data points to use
-Y = np.log( N )
-X = np.log( 1./r )
-T = np.vstack((Y,X,np.ones_like(X))).T
+# #Playing around with data points to use
+# Y = np.log( N )
+# X = np.log( 1./r )
+# T = np.vstack((Y,X,np.ones_like(X))).T
  
-df = pd.DataFrame( T, columns=['N(r)','Df','A'] )
-Y = df['N(r)']
-X = df[['Df','A']]
-result = OLS( Y, X ).fit()
-result.summary()
-
-
-
+# df = pd.DataFrame( T, columns=['N(r)','Df','A'] )
+# Y = df['N(r)']
+# X = df[['Df','A']]
+# result = OLS( Y, X ).fit()
+# result.summary()
 
 #-----------------------------------------------------------------------------
 m = 4
