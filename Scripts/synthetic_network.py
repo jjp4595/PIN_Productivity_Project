@@ -15,6 +15,7 @@ import time
 import matplotlib.pyplot as plt
 import statsmodels.formula.api as sm
 from statsmodels.regression.linear_model import OLS
+import powerlaw
 
 import attractivity_modelling
 import path_querying
@@ -91,9 +92,11 @@ for i in range(len(idx)): #Loop across  OAs
     target.append((point2s[i].x, point2s[i].y))
 all_samples = origin + target
 all_samples = pd.DataFrame(all_samples, columns = ['x-coord', 'y-coord'])
+
 all_attractivity = np.concatenate((attractivity1, attractivity1) , axis=0)
-
-
+attractivity_powerlaw = powerlaw.Fit(all_attractivity)
+alpha = attractivity_powerlaw.alpha
+xmin = attractivity_powerlaw.xmin
 
 
 
@@ -168,9 +171,20 @@ m = 4
 eps = med_paths
 theta = np.exp(np.log(xmin) - (m*np.log(eps)))
 
+dc = m * (alpha - 1)
+
 connectivity = np.divide(np.multiply(attractivity1, attractivity2), np.power(paths_matrix, m))
 connectivity[np.where(np.isinf(connectivity))[0], np.where(np.isinf(connectivity))[1]] = 0 
 
 adjacency = np.zeros_like(connectivity)
 adjacency[np.where(connectivity>theta)] = 1
+
+eta = -Df
+
+activity = np.power(paths_matrix, eta)
+activity[np.where(np.isinf(activity))[0], np.where(np.isinf(activity))[1]] = 0 
+
+UrbanY = 0.5 * np.sum(np.multiply(adjacency, activity))
+
+
 
