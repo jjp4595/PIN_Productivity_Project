@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import statsmodels.formula.api as sm
 from statsmodels.regression.linear_model import OLS
 import powerlaw
+import pickle
 
 import attractivity_modelling
 import path_querying
@@ -23,9 +24,11 @@ import fractal_working
 
 
 #Importing files---------------------------------------------------------------
-#Graph
+#Wokshop 2 data
 #sheff_OShighways = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\Workshop_2_data\Sheffield_OA.shp"))
-#sheff = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\Workshop_2_data\Sheffield_Network.gdb"))
+#sheff_network = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\Workshop_2_data\Sheffield_Network.gdb"))
+
+#Graph
 def load_graph():
     """
     Loading Graph ---------------------------------------------------------------
@@ -43,27 +46,27 @@ def load_graph():
 
 
 
-#Shape
-sheff_lsoa_shape = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\shapefiles\Sheffield_lsoa11.shp"))
-#sheff_oa_shape = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\shapefiles\Sheffield_oa11.shp"))
+# #Shape
+# sheff_lsoa_shape = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\shapefiles\Sheffield_lsoa11.shp"))
+# #sheff_oa_shape = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\shapefiles\Sheffield_oa11.shp"))
 
-#Population
-sheff_lsoa_pop = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS101EW_lsoa11.csv"))
-sheff_lsoa_pop['KS101EW0001'] = pd.to_numeric(sheff_lsoa_pop['KS101EW0001']) #Count: All categories:sex
-#sheff_oa_pop = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS101EW_oa11.csv"))
-#sheff_oa_pop['KS101EW0001'] = pd.to_numeric(sheff_oa_pop['KS101EW0001']) #Count: All categories:sex
+# #Population
+# sheff_lsoa_pop = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS101EW_lsoa11.csv"))
+# sheff_lsoa_pop['KS101EW0001'] = pd.to_numeric(sheff_lsoa_pop['KS101EW0001']) #Count: All categories:sex
+# #sheff_oa_pop = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS101EW_oa11.csv"))
+# #sheff_oa_pop['KS101EW0001'] = pd.to_numeric(sheff_oa_pop['KS101EW0001']) #Count: All categories:sex
 
-#Income
-def trim_lsoa():
-    sheff_lsoa_income = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Individual LSOA Income Estimate\E37000040\spatial\E37000040.shp"))
-    #LSOA Income data includes extra LSOA that are not in Sheffield City region, these should be removed.
-    ids = sheff_lsoa_income['lsoa11cd'].isin(sheff_lsoa_pop['GeographyCode'].values)
-    ids = np.where(ids==True)
-    sheff_lsoa_income = sheff_lsoa_income.iloc[ids]
-    return sheff_lsoa_income
-sheff_lsoa_income = trim_lsoa()
-#Education
-sheff_lsoa_education = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS501EW_lsoa11.csv"))
+# #Income
+# def trim_lsoa():
+#     sheff_lsoa_income = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Individual LSOA Income Estimate\E37000040\spatial\E37000040.shp"))
+#     #LSOA Income data includes extra LSOA that are not in Sheffield City region, these should be removed.
+#     ids = sheff_lsoa_income['lsoa11cd'].isin(sheff_lsoa_pop['GeographyCode'].values)
+#     ids = np.where(ids==True)
+#     sheff_lsoa_income = sheff_lsoa_income.iloc[ids]
+#     return sheff_lsoa_income
+# sheff_lsoa_income = trim_lsoa()
+# #Education
+# sheff_lsoa_education = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS501EW_lsoa11.csv"))
 
 
 
@@ -71,12 +74,6 @@ sheff_lsoa_education = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"
 
 
 
-
-
-##Setting indices -------------------------------------------------------------
-#s = 1
-#s = int(s*  len(sheff_lsoa_shape)) 
-#idx = np.round(np.linspace(0, len(sheff_lsoa_shape) - 1, s)).astype(int) #Indexing s spaced from array
 
 
                                                                    
@@ -100,16 +97,16 @@ def sample_attractivities(s,idx, edu_ratios, income_params):
     alpha = attractivity_powerlaw.alpha
     xmin = attractivity_powerlaw.xmin
     return attractivity1, attractivity2, alpha, xmin
-#attractivity1, attractivity2, alpha, xmin = sample_attractivities()
+#attractivity1, attractivity2, alpha, xmin = sample_attractivities(s,idx, edu_ratios, income_params)
 
 
 #Distance sampling -----------------------------------------------------------
 #Dummy distances
-def euclidean_dists_fun():
+def euclidean_dists_fun(sheff_shape):
     euclidean_dists = []
     point1s = []
-    centroids = sheff_lsoa_shape.centroid
-    for i in range(len(sheff_lsoa_shape)):
+    centroids = sheff_shape.centroid
+    for i in range(len(sheff_shape)):
         euclidean_dists.append(centroids.distance(centroids[i]).values)
         point1s.append((centroids.x[i], centroids.y[i]))
     all_coords = pd.DataFrame(point1s, columns = ['x-coord', 'y-coord'])  
@@ -128,7 +125,7 @@ def euclidean_dists_fun():
 
 
 #Real distances
-def sample_coords():
+def sample_coords(idx, sheff_shape):
     """
     Sample random coordinates in a polygon to be used for path querying
     all_coords is collected list of origin and target coords
@@ -138,19 +135,19 @@ def sample_coords():
     origin=[]
     target=[]
     for i in range(len(idx)): #Loop across  OAs    
-        point1s.append(path_querying.get_random_point_in_polygon(sheff_lsoa_shape['geometry'][idx[i]]))
+        point1s.append(path_querying.get_random_point_in_polygon(sheff_shape['geometry'][idx[i]]))
         origin.append((point1s[i].x, point1s[i].y))
         
-        point2s.append(path_querying.get_random_point_in_polygon(sheff_lsoa_shape['geometry'][idx[i]]))                     
+        point2s.append(path_querying.get_random_point_in_polygon(sheff_shape['geometry'][idx[i]]))                     
         target.append((point2s[i].x, point2s[i].y))
     
     all_coords = origin + target
     all_coords = pd.DataFrame(all_coords, columns = ['x-coord', 'y-coord'])
     return all_coords, point1s, point2s
-#all_coords, point1s, point2s = sample_coords()
+#all_coords, point1s, point2s = sample_coords(idx, sheff_shape)
 
 
-def run_shortest_path():
+def run_shortest_path(s, idx, point1s, point2s, graph_proj):
     """
     Running shortest path function
     """
@@ -174,7 +171,7 @@ def run_shortest_path():
     med_paths = sorted(paths)
     med_paths = int(med_paths[int(len(med_paths)/2)])
     return paths_matrix, med_paths
-#paths_matrix, med_paths = run_shortest_path()
+#paths_matrix, med_paths = run_shortest_path(s, idx, point1s, point2s, graph_proj)
 
 
 #-----------------------------------------------------------------------------
@@ -214,62 +211,56 @@ def fractal_dimension(coords_data):
     # result.summary()
     return Df
 
-#Df = fractal_dimension(all_coords) #shortest paths
-#Df = fractal_dimension(centroids) #dummy dists
 
 
 
 
 
-#single run through ----------------------------------------------------------
-# m = 4
-# beta = 7/6
-
-# eps = med_paths
-# theta = np.exp(np.log(xmin) - (m*np.log(eps)))
-
-
-# dc = m * (alpha - 1)
-
-
-# connectivity = np.divide(np.multiply(attractivity1, attractivity2), np.power(paths_matrix, m))
-# connectivity[np.where(np.isinf(connectivity))[0], np.where(np.isinf(connectivity))[1]] = 0 
-
-
-# adjacency = np.zeros_like(connectivity)
-# adjacency[np.where(connectivity>theta)] = 1
-
-
-# if Df <= dc:
-#     eta = ((-5/6) * Df) + dc
-# else: 
-#     eta = (Df/6)
-
-
-# activity = np.power(paths_matrix, eta)
-# activity[np.where(np.isinf(activity))[0], np.where(np.isinf(activity))[1]] = 0 
-
-
-# UrbanY = 0.5 * np.sum(np.multiply(adjacency, activity))
-
-
-#Monte Carlo run throughs
-def monte_carlo_runs(m_in, n, shape, pop, income, education):
-    startt = time.time()
-        
-    #Constants
-
-    m = m_in
-    
+#Import script ro create attractivity distributions
+def create_attractivity_dists(shape, pop, income, education):
+    """
+    This is run once and the distributions are saved. 
+    """
     #setting indices of OAs/LSOAs
     s = 1
     s = int(s*  len(shape)) 
     idx = np.round(np.linspace(0, len(shape) - 1, s)).astype(int) #Indexing s spaced from array
     
     income_params, edu_counts, edu_ratios = attractivity_modelling.attractivity(shape, pop, income, education, idx)
+    return s, idx, income_params, edu_counts, edu_ratios
+#s, idx, income_params, edu_counts, edu_ratios = create_attractivity_dists(sheff_lsoa_shape, sheff_lsoa_pop, sheff_lsoa_income, sheff_lsoa_education)
+
+
+
+def save_obj(obj, name ):
+    with open('obj/'+ name + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+#save_obj(lsoa_dist, "lsoa_data")
+def load_obj(name ):
+    with open('obj/' + name + '.pkl', 'rb') as f:
+        return pickle.load(f)
+
+
+#Saving data 
+# lsoa_dist = {"sheff_shape":sheff_lsoa_shape,"s":s, "idx":idx, "income_params":income_params, "edu_counts":edu_counts, "edu_ratios":edu_ratios}
+# save_obj(lsoa_dist, "lsoa_data")
+
+
+
+
+
+
+
+#Monte Carlo run throughs
+def monte_carlo_runs(m_in, n, s, idx, sheff_shape, income_params, edu_counts, edu_ratios):
+    startt = time.time()
+    time_log = []    
+    #Constants
+    m = m_in
+    
     
     #dummy distances
-    euclidean_dists, centroids, paths_matrix, med_paths = euclidean_dists_fun()
+    euclidean_dists, centroids, paths_matrix, med_paths = euclidean_dists_fun(sheff_shape)
     eps = med_paths
     
     #fractal dimension
@@ -287,12 +278,21 @@ def monte_carlo_runs(m_in, n, shape, pop, income, education):
         dc = m * (alpha - 1)
         
         #connectivity matrix
-        connectivity = np.divide(np.multiply(attractivity1, attractivity2), np.power(paths_matrix, m))
+        attractivity1 = attractivity1.reshape((len(attractivity1),1))
+        attractivity2 = attractivity2.reshape((len(attractivity2),1))
+        attractivity_product = np.matmul(attractivity1, attractivity2.transpose())
+        
+        connectivity = np.divide(attractivity_product, np.power(paths_matrix, m))
         connectivity[np.where(np.isinf(connectivity))[0], np.where(np.isinf(connectivity))[1]] = 0
         
         #adjacency matrix
         adjacency = np.zeros_like(connectivity)
         adjacency[np.where(connectivity>theta)] = 1
+        
+        
+        pop = np.stack(edu_counts).reshape((len(edu_counts), 1))
+        pop = np.matmul(pop, pop.transpose())
+        adjacency = np.multiply(adjacency, pop) #population amplification factor
         
         if Df <= dc:
             eta = ((-5/6) * Df) + dc
@@ -304,8 +304,31 @@ def monte_carlo_runs(m_in, n, shape, pop, income, education):
         activity[np.where(np.isinf(activity))[0], np.where(np.isinf(activity))[1]] = 0
         
         UrbanY.append( 0.5 * np.sum(np.multiply(adjacency, activity)) )
+        
     endt = time.time()
-    print(endt-startt)
-    return UrbanY
+    print("Time for this n run through is: "+str(endt-startt))
+    
+    time_log.append(endt-startt)
+    total_time = sum(time_log)
+    print("Total time is: " + str(total_time))
+    return sum(UrbanY)
 
-UrbanY = monte_carlo_runs(2, 1000, sheff_lsoa_shape, sheff_lsoa_pop, sheff_lsoa_income, sheff_lsoa_education)
+
+
+
+
+#-----------------------------------------------------------------------------
+#Working script
+lsoa_data = load_obj("lsoa_data")
+
+UrbanY = []
+ms = np.around(np.linspace(0,6, num=10),3)
+for m in ms:
+    UrbanY.append( monte_carlo_runs(m, 1000, lsoa_data['s'], lsoa_data['idx'], lsoa_data['sheff_shape'], lsoa_data['income_params'], lsoa_data['edu_counts'], lsoa_data['edu_ratios']))
+UrbanY = UrbanY/UrbanY[0]
+
+fig, ax = plt.subplots(1,1)
+ax.scatter(ms, UrbanY, c = 'k', marker=".", s=10)
+ax.set_yscale('log')
+ax.set_xlabel('m')
+ax.set_ylabel('$Y(N)_m / Y(N)_{m=0}$')
