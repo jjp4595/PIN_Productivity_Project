@@ -247,21 +247,49 @@ def load_obj(name ):
 
 
 
+#Shuffling data 
+def paths_shuffle(shape, income_params):
+    """
+    Shuffle data based on income parameter means
+    """
+    means = []
+    for oa in range(len(shape)):
+        means.append(stats.beta.mean(income_params[oa, 0], income_params[oa, 1], loc = income_params[oa, 2], scale = income_params[oa, 3]))
+    return means
+
+
+#Plotting shape files
+def plot_sheffield(sheff_shape):
+    base = sheff_shape.plot(color='white', edgecolor='black')    
+    sheff_shape.centroid.plot(ax = base, marker='o', color='red', markersize=5)    
+  
+    
+
 
 
 
 
 #Monte Carlo run throughs
-def monte_carlo_runs(m_in, n, s, idx, sheff_shape, income_params, edu_counts, edu_ratios):
+def monte_carlo_runs(m, n, s, idx, sheff_shape, income_params, edu_counts, edu_ratios):
     startt = time.time()
-    time_log = []    
+    time_log = []  
+    
     #Constants
-    m = m_in
+
     
     
     #dummy distances
     euclidean_dists, centroids, paths_matrix, med_paths = euclidean_dists_fun(sheff_shape)
     eps = med_paths
+    
+    #--------------If shuffling the layout -----------------------------------
+    # rng = np.random.default_rng()
+    # rng.shuffle(paths_matrix) #random sort
+    new_inds = np.argsort(paths_shuffle(sheff_shape, income_params))
+    paths_matrix = paths_matrix[new_inds, :]
+    paths_matrix = paths_matrix[: , new_inds]
+    #-------------------------------------------------------------------------
+    
     
     #fractal dimension
     Df = fractal_dimension(centroids)
@@ -273,8 +301,8 @@ def monte_carlo_runs(m_in, n, s, idx, sheff_shape, income_params, edu_counts, ed
         #Sample attractivities
         attractivity1, attractivity2, alpha, xmin = sample_attractivities(s,idx, edu_ratios, income_params)
         
-        #
-        theta = np.exp(np.log(xmin) - (m*np.log(eps)))
+        
+        theta = np.exp(np.log(xmin**2) - (m*np.log(eps)))
         dc = m * (alpha - 1)
         
         #connectivity matrix
@@ -288,8 +316,6 @@ def monte_carlo_runs(m_in, n, s, idx, sheff_shape, income_params, edu_counts, ed
         #adjacency matrix
         adjacency = np.zeros_like(connectivity)
         adjacency[np.where(connectivity>theta)] = 1
-        
-        
         pop = np.stack(edu_counts).reshape((len(edu_counts), 1))
         pop = np.matmul(pop, pop.transpose())
         adjacency = np.multiply(adjacency, pop) #population amplification factor
@@ -310,7 +336,7 @@ def monte_carlo_runs(m_in, n, s, idx, sheff_shape, income_params, edu_counts, ed
     
     time_log.append(endt-startt)
     total_time = sum(time_log)
-    print("Total time is: " + str(total_time))
+    print("Total run time is: " + str(total_time))
     return sum(UrbanY)
 
 
@@ -319,16 +345,35 @@ def monte_carlo_runs(m_in, n, s, idx, sheff_shape, income_params, edu_counts, ed
 
 #-----------------------------------------------------------------------------
 #Working script
+
+
+#1a) Load data to run sims
 lsoa_data = load_obj("lsoa_data")
 
-UrbanY = []
-ms = np.around(np.linspace(0,6, num=10),3)
-for m in ms:
-    UrbanY.append( monte_carlo_runs(m, 1000, lsoa_data['s'], lsoa_data['idx'], lsoa_data['sheff_shape'], lsoa_data['income_params'], lsoa_data['edu_counts'], lsoa_data['edu_ratios']))
-UrbanY = UrbanY/UrbanY[0]
+#1b)
+normal = load_obj("0_3_res5_1000runs_normal")
+shuffled_income = load_obj("0_3_res5_1000runs_shuffledonincome")
+#Plot sheffield
+#plot_sheffield(lsoa_data['sheff_shape']) 
 
+
+
+#2) Run simulation
+UrbanY = []
+ms = np.around(np.linspace(0,3, num=5),3)
+for m in ms:
+    UrbanY.append(monte_carlo_runs(m, 1000, lsoa_data['s'], lsoa_data['idx'], lsoa_data['sheff_shape'], lsoa_data['income_params'], lsoa_data['edu_counts'], lsoa_data['edu_ratios']))
+
+
+
+#3) Data visualisation of results
+normal = normal / normal[0]
+shuffled_income = shuffled_income/shuffled_income[0]
 fig, ax = plt.subplots(1,1)
-ax.scatter(ms, UrbanY, c = 'k', marker=".", s=10)
+ax.scatter(ms, normal, c = 'k', marker=".", s=20, label = 'normal geography')
+ax.scatter(ms, shuffled_income, c = 'r', marker=".", s=20, label = 'shuffled geography')
 ax.set_yscale('log')
 ax.set_xlabel('m')
 ax.set_ylabel('$Y(N)_m / Y(N)_{m=0}$')
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(handles, labels)
