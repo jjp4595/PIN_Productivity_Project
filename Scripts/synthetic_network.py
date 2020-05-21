@@ -4,16 +4,17 @@ Synthetic Sheffield
 
 import numpy as np
 import pandas as pd
-import os
-import geopandas as gpd
+# import os
+# import geopandas as gpd
 from scipy import stats
 import scipy.optimize
 from pyproj import CRS
 import osmnx as ox
-import networkx as nx
+
 import time
-import matplotlib.pyplot as plt
-import seaborn as sns
+
+
+
 
 import powerlaw
 import pickle
@@ -283,10 +284,10 @@ def monte_carlo_runs(m, n, s, idx, sheff_shape, income_params, edu_counts, edu_r
     if is_shuffled is None:
         pass 
     else:
-        east_inds = centroids["x-coord"].argsort().values  
-        income_inds = np.argsort(paths_shuffle(sheff_shape.loc[east_inds], income_params[east_inds])) #returns indices that would sort the array
+        east_inds = centroids["x-coord"].argsort().values  #low to high sort
         
-    
+        income_inds = np.argsort(paths_shuffle(sheff_shape, income_params)) #returns indices that would sort the array, low to high
+        
     
     
     #fractal dimension
@@ -306,15 +307,24 @@ def monte_carlo_runs(m, n, s, idx, sheff_shape, income_params, edu_counts, edu_r
         theta = np.exp(np.log(xmin**2) - (base_m*np.log(eps)))
         dc = base_m * (alpha - 1)
         
+        
         #connectivity matrix
         attractivity1 = attractivity1.reshape((len(attractivity1),1))
         attractivity2 = attractivity2.reshape((len(attractivity2),1))
         
+        #population amplification
+        pop = np.asarray(edu_counts).reshape((len(edu_counts), 1))
+              
+        
         if is_shuffled is None:
-            pass 
+            pop = np.matmul(pop, pop.transpose()) 
         else:
-            attractivity1 = attractivity1[income_inds]
-            attractivity2 = attractivity2[income_inds]
+            attractivity1[east_inds] = attractivity1[income_inds]
+            attractivity2[east_inds] = attractivity2[income_inds]
+
+            pop[east_inds] = pop[income_inds]
+            pop = np.matmul(pop, pop.transpose())
+
         
         attractivity_product = np.matmul(attractivity1, attractivity2.transpose())
         
@@ -323,10 +333,7 @@ def monte_carlo_runs(m, n, s, idx, sheff_shape, income_params, edu_counts, edu_r
         
         #adjacency matrix
         adjacency = np.zeros_like(connectivity)
-        adjacency[np.where(connectivity>theta)] = 1
-        
-        pop = np.stack(edu_counts).reshape((len(edu_counts), 1))
-        pop = np.matmul(pop, pop.transpose())
+        adjacency[np.where(connectivity>theta)] = 1      
         adjacency = np.multiply(adjacency, pop) #population amplification factor
         edges[:,:,i] = adjacency
         
@@ -359,8 +366,11 @@ def monte_carlo_runs(m, n, s, idx, sheff_shape, income_params, edu_counts, edu_r
 
 
 
-#-----------------------------------------------------------------------------
-#Working script
+#------------------------------------------------------------------------------
+#
+#                   Running Monte Carlo
+#
+#------------------------------------------------------------------------------
 
 
 #1a) Load data to run sims
@@ -374,7 +384,7 @@ UrbanYs = []
 edge_freqs = []
 edge_widths = []
 for m in ms:
-    UrbanY, edge_freq, edge_width = monte_carlo_runs(m, 200, lsoa_data['s'], lsoa_data['idx'], lsoa_data['sheff_shape'], lsoa_data['income_params'], lsoa_data['edu_counts'], lsoa_data['edu_ratios'])
+    UrbanY, edge_freq, edge_width = monte_carlo_runs(m, 1000, lsoa_data['s'], lsoa_data['idx'], lsoa_data['sheff_shape'], lsoa_data['income_params'], lsoa_data['edu_counts'], lsoa_data['edu_ratios'])
     UrbanYs.append(UrbanY)
     edge_freqs.append(edge_freq)
     edge_width = (edge_width - edge_width.min()) / (edge_width.max() - edge_width.min())
@@ -386,14 +396,14 @@ normal = {
     "edge_widths": edge_widths,
     "m_values": ms
     }
-save_obj(normal, "normal_ms_0_2_9res")
+save_obj(normal, "normal_ms_0_2_9res_1000run")
 
 
 UrbanYs = []
 edge_freqs = []
 edge_widths = []
 for m in ms:
-    UrbanY, edge_freq, edge_width = monte_carlo_runs(m, 200, lsoa_data['s'], lsoa_data['idx'], lsoa_data['sheff_shape'], lsoa_data['income_params'], lsoa_data['edu_counts'], lsoa_data['edu_ratios'], is_shuffled = 1)
+    UrbanY, edge_freq, edge_width = monte_carlo_runs(m, 1000, lsoa_data['s'], lsoa_data['idx'], lsoa_data['sheff_shape'], lsoa_data['income_params'], lsoa_data['edu_counts'], lsoa_data['edu_ratios'], is_shuffled = 1)
     UrbanYs.append(UrbanY)
     edge_freqs.append(edge_freq)
     edge_width = (edge_width - edge_width.min()) / (edge_width.max() - edge_width.min())
@@ -405,7 +415,7 @@ shuffled = {
     "edge_widths": edge_widths,
     "m_values": ms
     }
-save_obj(shuffled, "shuffled_ms_0_2_9res")
+save_obj(shuffled, "shuffled_ms_0_2_9res_1000run")
 
 #----------------------------------------------------------------------------
 
@@ -414,119 +424,6 @@ save_obj(shuffled, "shuffled_ms_0_2_9res")
 
 
 
-
-#------------------------------------------------------------------------------
-#
-#                   Analysis Sections...
-#
-#------------------------------------------------------------------------------
-
-
-
-
-#Density ratio estimation
-def density_ratio(first, second):
-    ratios = [a/b for a in first for b in second]
-    sorted_ratios = np.sort(ratios)
-    median_50 = sorted_ratios[int((len(ratios) * 0.5))]
-    ratio_25 = sorted_ratios[int((len(ratios) * 0.25))]
-    ratio_75 = sorted_ratios[int((len(ratios) * 0.75))]
-    mean, sigma = np.mean(ratios), np.std(ratios)
-    conf_int = stats.norm.interval(0.95, loc=mean, scale=sigma / np.sqrt(len(ratios)))
-    #fig, ax = plt.subplots(1,1)
-    #ax.hist(ratios, bins = 20 , density=True)
-    info = {
-        "sorted ratios":sorted_ratios,
-        "median": median_50,
-        "25th":ratio_25, 
-        "75th":ratio_75,
-        "mean":mean,
-        "sigma":sigma, 
-        "conf_int":conf_int
-        }
-    
-    return info
-
-# #-----------------------------------------------------------------------------
-
-
-params = {'font.family':'serif',
-        'axes.labelsize':'small',
-        'xtick.labelsize':'x-small',
-        'ytick.labelsize':'x-small', 
-        
-        'legend.fontsize':'small',
-        'legend.title_fontsize':'small',
-        'legend.fancybox': True,
-        'legend.framealpha': 0.5,
-        'legend.shadow': False,
-        'legend.frameon': True,
-        
-        'grid.linestyle':'--',
-        'grid.linewidth':'0.5',
-        'lines.linewidth':'0.5'}
-plt.rcParams.update(params)
-
-
-# fig, [ax0, ax1, ax2] = plt.subplots(1,3)
-# fig.set_size_inches(9, 4)
-# ax0.boxplot([norm_m0['sorted ratios'], shuff_m0['sorted ratios']], labels = ['Normal', 'Shuffled'], notch=True, showfliers=False, showmeans=True)
-# ax0.set_title('m = 0')
-# ax0.set_xlabel('Geographical Layout', labelpad = 20)
-# ax0.set_ylabel('Density ratios compared to baseline')
-# ax1.boxplot([norm_m1['sorted ratios'], shuff_m1['sorted ratios']], labels = ['Normal', 'Shuffled'], notch=True, showfliers=False, showmeans=True)
-# ax1.set_title('m = 1')
-# ax1.set_xlabel('Geographical Layout', labelpad = 20)
-# ax2.boxplot([norm_m2['sorted ratios'], shuff_m2['sorted ratios']], labels = ['Normal', 'Shuffled'], notch=True, showfliers=False, showmeans=True)
-# ax2.set_title('m = 2')
-# ax2.set_xlabel('Geographical Layout', labelpad = 20)
-# plt.tight_layout()
-# fig.savefig(os.environ['USERPROFILE'] + r'\Dropbox\PIN\workshop\13-05\boxplots.png', format = 'png')
-
-
-
-#3 x 3 ms 0 - 4
-fig, axs = plt.subplots(3,3)
-axs=axs.ravel()
-for i in range(len(ms)):
-    base = normal['UrbanYs'][0]
-    norm = density_ratio(normal['UrbanYs'][i], base)
-    shuff = density_ratio(shuffled['UrbanYs'][i], base)
-    axs[i].boxplot([norm['sorted ratios'], shuff['sorted ratios']], labels = ['Normal', 'Shuffled'], notch=True, showfliers=False, showmeans=True)
-    axs[i].set_title('m = ' + str(ms[i]))
-plt.tight_layout()
-
-
-
-
-
-
-#4) Creating network graphs
-def plot_graphs_sheffield(sheff_shape, m_no, edge_freqs, edge_widths):
-    
-    centroid = sheff_shape.centroid
-    nodesx = centroid.x.tolist()
-    nodesy = centroid.y.tolist()
-    nodes = list(zip(nodesx, nodesy))
-    edges = np.nonzero(edge_freqs[m_no])
-    edges = list(zip(edges[0], edges[1]))
-    
-    G = nx.house_graph()
-    
-    for i in range(len(nodes)):
-        G.add_node(i, pos = nodes[i])
-    
-    for i in range(len(edges)):
-        G.add_edge(edges[i][0], edges[i][1], alpha = edge_freqs[m_no][edges[i]])
-    
-    base = lsoa_data['sheff_shape'].plot(color='white', edgecolor='black')
-    nx.draw_networkx_nodes(G, nodes, node_size = 10, ax = base)
-    
-    #for i in range(len(edges)):
-    #    nx.draw_networkx_edges(G, nodes[edges[i][0]], nodes[edges[i][1]] , width = edge_widths[m_no][edges[i]], alpha = edge_freqs[m_no][edges[i]], ax= base)
-        
-    nx.draw_networkx_edges(G, nodes, width = [edge_widths[m_no][i] for i in edges], alpha = 0.35, ax= base)
-    return
 
 
 
