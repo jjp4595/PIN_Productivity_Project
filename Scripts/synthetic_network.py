@@ -30,21 +30,6 @@ import fractal_working
 #sheff_OShighways = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\Workshop_2_data\Sheffield_OA.shp"))
 #sheff_network = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\Workshop_2_data\Sheffield_Network.gdb"))
 
-#Graph
-def load_graph():
-    """
-    Loading Graph ---------------------------------------------------------------
-    """
-    #Getting drivable streets in sheffield
-    place_name = "Sheffield, UK"
-    graph = ox.graph_from_place(place_name, network_type = 'drive')
-    #graph = ox.graph_from_file() # create graph from OSM data in XML file
-    nodes, edges = ox.graph_to_gdfs(graph, nodes=True, edges=True) #Convert graph int geodataframe
-    crs = CRS.from_string("epsg:27700")#convert data into same co-ordinate system as lsoa data
-    graph_proj = ox.project_graph(graph, to_crs=crs)
-    nodes_proj, edges_proj = ox.graph_to_gdfs(graph_proj, nodes=True, edges=True) #Convert graph into UTM zone 30 format (with m units)
-    return graph_proj 
-#graph_proj = load_graph()
 
 
 
@@ -126,54 +111,9 @@ def euclidean_dists_fun(sheff_shape):
 #euclidean_dists, centroids, paths_matrix, med_paths = euclidean_dists_fun()
 
 
-#Real distances
-def sample_coords(idx, sheff_shape):
-    """
-    Sample random coordinates in a polygon to be used for path querying
-    all_coords is collected list of origin and target coords
-    """
-    point1s = []
-    point2s = []
-    origin=[]
-    target=[]
-    for i in range(len(idx)): #Loop across  OAs    
-        point1s.append(path_querying.get_random_point_in_polygon(sheff_shape['geometry'][idx[i]]))
-        origin.append((point1s[i].x, point1s[i].y))
-        
-        point2s.append(path_querying.get_random_point_in_polygon(sheff_shape['geometry'][idx[i]]))                     
-        target.append((point2s[i].x, point2s[i].y))
-    
-    all_coords = origin + target
-    all_coords = pd.DataFrame(all_coords, columns = ['x-coord', 'y-coord'])
-    return all_coords, point1s, point2s
-#all_coords, point1s, point2s = sample_coords(idx, sheff_shape)
 
 
-def run_shortest_path(s, idx, point1s, point2s, graph_proj):
-    """
-    Running shortest path function
-    """
-    paths_matrix = np.zeros((s, s))
-    t = []
-    for i in range(len(idx)): 
-        t.append(time.time())
-        for j in range(len(idx)): #Loop across target OAs to create 
-            if i==j:
-                paths_matrix[i,j] = 0
-            else:
-                paths_matrix[i,j] = path_querying.shortestpath_oa(point1s[i],point2s[j], graph_proj)  
-        t[i] = time.time() - t[i]
-        print(t[i])
-        
-           
-    #median path distances     
-    paths = np.concatenate(paths_matrix, axis=0)
-    paths = paths[paths != 0]
-    paths = paths[paths != 1e8]
-    med_paths = sorted(paths)
-    med_paths = int(med_paths[int(len(med_paths)/2)])
-    return paths_matrix, med_paths
-#paths_matrix, med_paths = run_shortest_path(s, idx, point1s, point2s, graph_proj)
+
 
 
 #-----------------------------------------------------------------------------
