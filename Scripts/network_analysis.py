@@ -29,8 +29,8 @@ def load_obj(name ):
 #
 #------------------------------------------------------------------------------
 lsoa_data = load_obj("lsoa_data")
-normal = load_obj("normal_ms_0_2_9res_400run")
-shuffled = load_obj("shuffled_ms_0_2_9res_400run")
+normal = load_obj("normal_ms_0_25_8res_1000run")
+shuffled = load_obj("shuffled_ms_0_25_8res_1000run")
 
 
 
@@ -96,18 +96,19 @@ plt.rcParams.update(params)
 
 def productivitygraph():
     #3 x 3 ms 0 - 4
-    fig, axs = plt.subplots(3,3)
-    fig.set_size_inches(7,6)
+    fig, axs = plt.subplots(2,4)
+    fig.set_size_inches(6.39,4)
     axs=axs.ravel()
-    baseline = 4 #density ratio for comparison. 
+    baseline = 0 #density ratio for comparison. 
     for i in range(len(normal['m_values'])):
         base = normal['UrbanYs'][baseline]
         norm = density_ratio(normal['UrbanYs'][i], base)
         shuff = density_ratio(shuffled['UrbanYs'][i], base)
         axs[i].boxplot([norm['sorted ratios'], shuff['sorted ratios']], labels = ['Normal', 'Shuffled'], notch=True, showfliers=False, showmeans=True)
-        axs[i].set_title('m = ' + str(round(normal['m_values'][i],3)))
+        axs[i].set_title('m = ' + str(round(normal['m_values'][i],2)))
     plt.tight_layout()
-productivitygraph()
+    fig.savefig(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\reports\m_sensitivity.png"), dpi=100, format = 'png')
+#productivitygraph()
 
 
 
@@ -158,6 +159,7 @@ def layoutgraphs():
     divider = make_axes_locatable(base2)
     cax = divider.append_axes("right", size="5%", pad=0.05)
     plt.colorbar(scalarMap, cax=cax)
+    #cax.set_ylabel('normalised income')
     base.set_xticks([])
     base.set_yticks([])
     base2.set_xticks([])
@@ -216,7 +218,22 @@ def networkgraph(layout, m, ax_in):
     # nx.drawing.nx_pylab.draw_networkx(G, di, node_colour='b', node_size=5, width=edge_freqs*100, edge_color=colorList,  with_labels=False, ax=base)
     nodes_dr = nx.draw_networkx_nodes(G, di, node_colour = 'b', node_size=5, with_labels=False, ax = ax_in)
     edges_dr = nx.draw_networkx_edges(G, di, width=edge_freqs*100, edge_color=colorList, ax=ax_in)
-    plt.colorbar(scalarMap, ax=ax_in)
+    #plt.colorbar(scalarMap, ax=ax_in)
+    divider = make_axes_locatable(ax_in)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    cax.set_ylabel('edge strength')
+    plt.colorbar(scalarMap, cax=cax)
 
-fig, ax0 = plt.subplots(1,1)
-networkgraph(normal, 2, ax0)
+
+
+fig, [[ax0, ax1], [ax1a, ax1b], [ax2, ax3]] = plt.subplots(3,2)
+fig.set_size_inches(6.39, 6)
+networkgraph(normal, 0, ax0)
+networkgraph(shuffled, 0, ax1)
+networkgraph(normal, 2, ax1a)
+networkgraph(shuffled, 2, ax1b)
+networkgraph(normal, 6, ax2)
+networkgraph(shuffled, 6, ax3)
+fig.savefig(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\reports\network_show.png"), dpi=100, format = 'png')
+
+

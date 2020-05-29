@@ -10,7 +10,7 @@ from scipy import stats
 import scipy.optimize
 from pyproj import CRS
 import osmnx as ox
-
+import multiprocessing
 import time
 
 
@@ -174,6 +174,9 @@ def create_attractivity_dists(shape, pop, income, education):
 
 
 
+
+
+
 def save_obj(obj, name ):
     with open('obj/'+ name + '.pkl', 'wb') as f:
         pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
@@ -209,9 +212,13 @@ def paths_shuffle(shape, income_params):
 
 
 #Monte Carlo run throughs
-def monte_carlo_runs(m, n, s, idx, sheff_shape, income_params, edu_counts, edu_ratios, is_shuffled = None):
+def monte_carlo_runs(m, n, lsoa_data, is_shuffled = None):
     startt = time.time()
     time_log = []  
+    
+    
+    s, idx, sheff_shape, income_params, edu_counts, edu_ratios = lsoa_data['s'], lsoa_data['idx'], lsoa_data['sheff_shape'], lsoa_data['income_params'], lsoa_data['edu_counts'], lsoa_data['edu_ratios']
+    
     
     #Constants
     base_m = 0
@@ -219,6 +226,14 @@ def monte_carlo_runs(m, n, s, idx, sheff_shape, income_params, edu_counts, edu_r
     
     #dummy distances
     euclidean_dists, centroids, paths_matrix, med_paths = euclidean_dists_fun(sheff_shape)
+    #eps = med_paths
+    
+    #actual distances
+    paths_matrix = load_obj("ave_paths")
+    paths = np.concatenate(paths_matrix, axis=0)
+    paths = paths[paths != 0]
+    med_paths = sorted(paths)
+    med_paths = int(med_paths[int(len(med_paths)/2)])    
     eps = med_paths
     
     if is_shuffled is None:
@@ -268,8 +283,10 @@ def monte_carlo_runs(m, n, s, idx, sheff_shape, income_params, edu_counts, edu_r
         
         attractivity_product = np.matmul(attractivity1, attractivity2.transpose())
         
+        #ensure 0 on diagonal?        
         connectivity = np.divide(attractivity_product, np.power(paths_matrix, m))
-        connectivity[np.where(np.isinf(connectivity))[0], np.where(np.isinf(connectivity))[1]] = 0        
+        connectivity[np.where(np.isinf(connectivity))[0], np.where(np.isinf(connectivity))[1]] = 0
+        connectivity[np.diag_indices_from(connectivity)] = 0
         
         #adjacency matrix
         adjacency = np.zeros_like(connectivity)
@@ -318,52 +335,100 @@ lsoa_data = load_obj("lsoa_data")
 
 
 #stability of montecarlo ---------------------------------------
-ms = np.linspace(0,2,num=9)
+# ms = np.linspace(0,2,num=8)
 
-UrbanYs = []
-edge_freqs = []
-edge_widths = []
-for m in ms:
-    UrbanY, edge_freq, edge_width = monte_carlo_runs(m, 1000, lsoa_data['s'], lsoa_data['idx'], lsoa_data['sheff_shape'], lsoa_data['income_params'], lsoa_data['edu_counts'], lsoa_data['edu_ratios'])
-    UrbanYs.append(UrbanY)
-    edge_freqs.append(edge_freq)
-    edge_width = (edge_width - edge_width.min()) / (edge_width.max() - edge_width.min())
-    edge_widths.append(edge_width)
+# UrbanYs = []
+# edge_freqs = []
+# edge_widths = []
+# for m in ms:
+#     UrbanY, edge_freq, edge_width = monte_carlo_runs(m, 1000, lsoa_data)
+#     UrbanYs.append(UrbanY)
+#     edge_freqs.append(edge_freq)
+#     edge_width = (edge_width - edge_width.min()) / (edge_width.max() - edge_width.min())
+#     edge_widths.append(edge_width)
 
-normal = {
-    "UrbanYs": UrbanYs,
-    "edge_freqs": edge_freqs,
-    "edge_widths": edge_widths,
-    "m_values": ms
-    }
-save_obj(normal, "normal_ms_0_2_9res_1000run")
+# normal = {
+#     "UrbanYs": UrbanYs,
+#     "edge_freqs": edge_freqs,
+#     "edge_widths": edge_widths,
+#     "m_values": ms
+#     }
+# save_obj(normal, "normal_ms_0_2_9res_1000run")
 
 
-UrbanYs = []
-edge_freqs = []
-edge_widths = []
-for m in ms:
-    UrbanY, edge_freq, edge_width = monte_carlo_runs(m, 1000, lsoa_data['s'], lsoa_data['idx'], lsoa_data['sheff_shape'], lsoa_data['income_params'], lsoa_data['edu_counts'], lsoa_data['edu_ratios'], is_shuffled = 1)
-    UrbanYs.append(UrbanY)
-    edge_freqs.append(edge_freq)
-    edge_width = (edge_width - edge_width.min()) / (edge_width.max() - edge_width.min())
-    edge_widths.append(edge_width)
+# UrbanYs = []
+# edge_freqs = []
+# edge_widths = []
+# for m in ms:
+#     UrbanY, edge_freq, edge_width = monte_carlo_runs(m, 1000, lsoa_data, is_shuffled = 1)
+#     UrbanYs.append(UrbanY)
+#     edge_freqs.append(edge_freq)
+#     edge_width = (edge_width - edge_width.min()) / (edge_width.max() - edge_width.min())
+#     edge_widths.append(edge_width)
 
-shuffled = {
-    "UrbanYs": UrbanYs,
-    "edge_freqs": edge_freqs,
-    "edge_widths": edge_widths,
-    "m_values": ms
-    }
-save_obj(shuffled, "shuffled_ms_0_2_9res_1000run")
+# shuffled = {
+#     "UrbanYs": UrbanYs,
+#     "edge_freqs": edge_freqs,
+#     "edge_widths": edge_widths,
+#     "m_values": ms
+#     }
+# save_obj(shuffled, "shuffled_ms_0_2_9res_1000run")
 
+# #----------------------------------------------------------------------------
+
+
+if __name__ == '__main__':
+    t1 = time.time()
+    no_scripts = multiprocessing.cpu_count()
+    
+    ms = [0, 0.5, 1, 1.25, 1.5, 1.75, 2, 2.25]
+
+
+    args_normal = []
+    args_shuffled = []
+    
+    for i in range(len(ms)):
+        args_normal.append((ms[i], 1000, lsoa_data))
+        args_shuffled.append((ms[i], 1000, lsoa_data, 1))
+    
+    with multiprocessing.Pool(processes=no_scripts) as pool:
+        output = pool.starmap(monte_carlo_runs, args_normal)
+           
+    UrbanYs, edge_freqs, edge_widths = [], [], []
+    for i in range(len(output)):
+        UrbanYs.append(output[i][0])
+        edge_freqs.append(output[i][1])
+        edge_widths.append(output[i][2])
+
+
+    normal = {
+        "UrbanYs": UrbanYs,
+        "edge_freqs": edge_freqs,
+        "edge_widths": edge_widths,
+        "m_values": ms
+        }    
+
+    save_obj(normal, "normal")
+    
+    
+    with multiprocessing.Pool(processes=no_scripts) as pool:
+        output = pool.starmap(monte_carlo_runs, args_shuffled)
+    
+    UrbanYs, edge_freqs, edge_widths = [], [], []
+    for i in range(len(output)):
+        UrbanYs.append(output[i][0])
+        edge_freqs.append(output[i][1])
+        edge_widths.append(output[i][2])
+
+
+    shuffled = {
+        "UrbanYs": UrbanYs,
+        "edge_freqs": edge_freqs,
+        "edge_widths": edge_widths,
+        "m_values": ms
+        }        
+    
+    save_obj(shuffled, "shuffled")
+    print(time.time()-t1)
 #----------------------------------------------------------------------------
-
-
-
-
-
-
-
-
 

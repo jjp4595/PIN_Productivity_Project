@@ -9,8 +9,10 @@ from shapely.geometry import Polygon, Point
 import random
 import networkx as nx
 from pyproj import CRS
-
-
+import pandas as pd
+import multiprocessing
+from time import time
+import pickle
 
 
 #Graph
@@ -66,23 +68,20 @@ def shortestpath_oa(point1,point2, graph_proj):
         return 1e8
 
 
-def run_shortest_path(sheff_shape, graph_proj):
+def run_shortest_path(paths, sheff_shape, graph_proj):
     """
     Running shortest path function
     """
-    paths_matrix = np.zeros((len(sheff_shape), len(sheff_shape)))
-
-    for i in range(len(sheff_shape)): 
-        
-        for j in range(len(sheff_shape)): #Loop across target OAs to create 
-            if i==j:
-                paths_matrix[i,j] = 0
+    
+    for i in range(paths.shape[0]):         
+        for j in range(paths.shape[1]): #Loop across target OAs to create 
+            if paths.index[i]==paths.columns[j]:
+                pass
             else:
-                point1s = get_random_point_in_polygon(sheff_shape['geometry'][i])
-                point2s = get_random_point_in_polygon(sheff_shape['geometry'][j])
-                paths_matrix[i,j] = shortestpath_oa(point1s,point2s, graph_proj)  
-      
-    return paths_matrix
+                point1s = get_random_point_in_polygon(sheff_shape['geometry'][paths.index[i]])
+                point2s = get_random_point_in_polygon(sheff_shape['geometry'][paths.columns[j]])
+                paths.iloc[i,j] = shortestpath_oa(point1s,point2s, graph_proj)       
+    return paths
 
 
 
@@ -91,12 +90,46 @@ def load_graph():
     graph_proj = ox.save_load.load_graphml("sheff_driveable.graphml", folder = os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\scripts_misc"))
     return graph_proj
 
-sheff_shape = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\shapefiles\Sheffield_lsoa11.shp"))
+
+def save_obj(obj, name ):
+    with open(name + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+
+
+#actual scripts
+sheff_shape = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\shapefiles\Sheffield_lsoa11.shp"))    
+#sheff_shape = sheff_shape.iloc[0:10,:]
 graph_proj = load_graph()
 
+paths_dataframe = pd.DataFrame(np.zeros((len(sheff_shape), len(sheff_shape))))
 
-sheff_shape = sheff_shape.iloc[0:20]
 
-all_paths = []
-for i in range(1):
-    all_paths.append(run_shortest_path(sheff_shape, graph_proj))
+no_scripts = multiprocessing.cpu_count() #when running on personal
+
+#no_scripts = 16
+paths_splits = np.array_split(paths_dataframe, no_scripts)
+                              
+
+#no paralellising
+# t1=time()
+# all_paths = []
+# for i in range(no_scripts):
+#     all_paths.append(run_shortest_path(paths_splits[i], sheff_shape, graph_proj))
+# all_paths = pd.concat(all_paths)
+# t2=time()
+# print(t2-t1)
+
+
+if __name__ == '__main__':
+    t1 = time()
+    args = []    
+    for i in range(no_scripts):
+        args.append((paths_splits[i], sheff_shape, graph_proj))
+    
+    
+    with multiprocessing.Pool(processes=no_scripts) as pool:
+        all_paths = pool.starmap(run_shortest_path, args)
+        all_paths = pd.concat(all_paths)
+    t2 = time()
+    print(t2-t1)
+    save_obj(all_paths, 'all_paths')
