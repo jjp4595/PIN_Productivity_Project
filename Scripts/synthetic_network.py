@@ -4,77 +4,84 @@ Synthetic Sheffield
 
 import numpy as np
 import pandas as pd
-# import os
-# import geopandas as gpd
+import os
+import geopandas as gpd
 from scipy import stats
 import scipy.optimize
-from pyproj import CRS
-import osmnx as ox
 import multiprocessing
 import time
-
-
-
-
 import powerlaw
 import pickle
 
-
+#my scripts
 import attractivity_modelling
-import path_querying
 import fractal_working
 
 
-#Importing files---------------------------------------------------------------
-#Wokshop 2 data
-#sheff_OShighways = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\Workshop_2_data\Sheffield_OA.shp"))
-#sheff_network = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\Workshop_2_data\Sheffield_Network.gdb"))
+def sheff_import():
+    sheff_lsoa_shape = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\shapefiles\Sheffield_lsoa11.shp"))
+    sheff_lsoa_pop = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS101EW_lsoa11.csv"))
+    sheff_lsoa_pop['KS101EW0001'] = pd.to_numeric(sheff_lsoa_pop['KS101EW0001']) #Count: All categories:sex
+    sheff_lsoa_income = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Individual LSOA Income Estimate\E37000040\spatial\E37000040.shp"))
+    #LSOA Income data includes extra LSOA that are not in Sheffield City region, these should be removed.
+    ids = sheff_lsoa_income['lsoa11cd'].isin(sheff_lsoa_pop['GeographyCode'].values)
+    ids = np.where(ids==True)
+    sheff_lsoa_income = sheff_lsoa_income.iloc[ids]
+    sheff_lsoa_education = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS501EW_lsoa11.csv"))
+    return sheff_lsoa_shape, sheff_lsoa_pop, sheff_lsoa_income, sheff_lsoa_education
+sheff_lsoa_shape, sheff_lsoa_pop, sheff_lsoa_income, sheff_lsoa_education = sheff_import()
+
+
+def save_obj(obj, name ):
+    with open('obj/'+ name + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+#save_obj(lsoa_dist, "lsoa_data")
+def load_obj(name ):
+    with open('obj/' + name + '.pkl', 'rb') as f:
+        return pickle.load(f)
+
+
+
+#Import script ro create attractivity distributions
+income_params, edu_counts, edu_ratios = attractivity_modelling.attractivity(sheff_lsoa_shape, sheff_lsoa_pop, sheff_lsoa_income, sheff_lsoa_education)
+
+# #Sense check distributions
+# import matplotlib.pyplot as plt
+# fig, axs = plt.subplots(15,23)
+# axs = axs.ravel()
+# for i in range(len(income_params)):
+#     i
+#     r = stats.beta.rvs(income_params[i,0], income_params[i,1], loc =income_params[i,2], scale = income_params[i,3], size = 1000)
+#     axs[i].plot(np.linspace(0,1,100),  stats.beta.pdf(np.linspace(0,1,100), income_params[i, 0], income_params[i, 1], loc = income_params[i, 2], scale = income_params[i, 3]) , label = 'CDF')
+#     axs[i].hist(r, density = True)
+# plt.tight_layout()
+
+# fig, axs = plt.subplots(15,23)
+# axs = axs.ravel()
+# for i in range(len(income_params)):
+#     education=np.random.choice(4, size = edu_counts[i], p=edu_ratios[i]) #where p values are effectively the ratio of people with a given education level you can alternatively use the same method for income as well    
+#     axs[i].hist(education, density = True)
+# plt.tight_layout()
 
 
 
 
-# #Shape
-# sheff_lsoa_shape = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\shapefiles\Sheffield_lsoa11.shp"))
-# #sheff_oa_shape = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\shapefiles\Sheffield_oa11.shp"))
-
-# #Population
-# sheff_lsoa_pop = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS101EW_lsoa11.csv"))
-# sheff_lsoa_pop['KS101EW0001'] = pd.to_numeric(sheff_lsoa_pop['KS101EW0001']) #Count: All categories:sex
-# #sheff_oa_pop = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS101EW_oa11.csv"))
-# #sheff_oa_pop['KS101EW0001'] = pd.to_numeric(sheff_oa_pop['KS101EW0001']) #Count: All categories:sex
-
-# #Income
-# def trim_lsoa():
-#     sheff_lsoa_income = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Individual LSOA Income Estimate\E37000040\spatial\E37000040.shp"))
-#     #LSOA Income data includes extra LSOA that are not in Sheffield City region, these should be removed.
-#     ids = sheff_lsoa_income['lsoa11cd'].isin(sheff_lsoa_pop['GeographyCode'].values)
-#     ids = np.where(ids==True)
-#     sheff_lsoa_income = sheff_lsoa_income.iloc[ids]
-#     return sheff_lsoa_income
-# sheff_lsoa_income = trim_lsoa()
-# #Education
-# sheff_lsoa_education = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS501EW_lsoa11.csv"))
 
 
 
-#------------------------------------------------------------------------------
+#Saving data 
+lsoa_dist = {"sheff_shape":sheff_lsoa_shape, "income_params":income_params, "edu_counts":edu_counts, "edu_ratios":edu_ratios}
+save_obj(lsoa_dist, "lsoa_data")
 
+ 
+                                
 
-
-
-
-                                                                   
-
-##Generate income and education distributions from OA/LSOA
-#income_params, edu_counts, edu_ratios = attractivity_modelling.attractivity(sheff_lsoa_shape, sheff_lsoa_pop, sheff_lsoa_income, sheff_lsoa_education, idx)
 #Sampling attractivities --------------------------------------
-def sample_attractivities(s,idx, edu_ratios, income_params):  
+def sample_attractivities(oa, edu_ratios, income_params):  
 
-
-    attractivity1 = np.zeros((s))
-    attractivity2 = np.zeros((s))
-    for i in range(len(idx)): #Loop across  OAs    
-        
+    attractivity1 = np.zeros((len(oa)))
+    attractivity2 = np.zeros((len(oa)))
+    for i in range(len(oa)): #Loop across  OAs            
         attractivity1[i] = attractivity_modelling.attractivity_sampler(i, edu_ratios, income_params)                     
         attractivity2[i] = attractivity_modelling.attractivity_sampler(i, edu_ratios, income_params)
         
@@ -87,9 +94,11 @@ def sample_attractivities(s,idx, edu_ratios, income_params):
 #attractivity1, attractivity2, alpha, xmin = sample_attractivities(s,idx, edu_ratios, income_params)
 
 
-#Distance sampling -----------------------------------------------------------
-#Dummy distances
-def euclidean_dists_fun(sheff_shape):
+
+def euclidean_dists_fun(sheff_shape): 
+    """
+    Dummy distances function. 
+    """    
     euclidean_dists = []
     point1s = []
     centroids = sheff_shape.centroid
@@ -112,11 +121,6 @@ def euclidean_dists_fun(sheff_shape):
 
 
 
-
-
-
-
-#-----------------------------------------------------------------------------
 def fractal_dimension(coords_data):
     """
     Graph may require some intuition to fit the linear regression through certain points
@@ -155,43 +159,6 @@ def fractal_dimension(coords_data):
 
 
 
-
-
-
-#Import script ro create attractivity distributions
-def create_attractivity_dists(shape, pop, income, education):
-    """
-    This is run once and the distributions are saved. 
-    """
-    #setting indices of OAs/LSOAs
-    s = 1
-    s = int(s*  len(shape)) 
-    idx = np.round(np.linspace(0, len(shape) - 1, s)).astype(int) #Indexing s spaced from array
-    
-    income_params, edu_counts, edu_ratios = attractivity_modelling.attractivity(shape, pop, income, education, idx)
-    return s, idx, income_params, edu_counts, edu_ratios
-#s, idx, income_params, edu_counts, edu_ratios = create_attractivity_dists(sheff_lsoa_shape, sheff_lsoa_pop, sheff_lsoa_income, sheff_lsoa_education)
-
-
-
-
-
-
-def save_obj(obj, name ):
-    with open('obj/'+ name + '.pkl', 'wb') as f:
-        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
-#save_obj(lsoa_dist, "lsoa_data")
-def load_obj(name ):
-    with open('obj/' + name + '.pkl', 'rb') as f:
-        return pickle.load(f)
-
-
-#Saving data 
-# lsoa_dist = {"sheff_shape":sheff_lsoa_shape,"s":s, "idx":idx, "income_params":income_params, "edu_counts":edu_counts, "edu_ratios":edu_ratios}
-# save_obj(lsoa_dist, "lsoa_data")
-
-
-
 #Shuffling data 
 def paths_shuffle(shape, income_params):
     """
@@ -203,15 +170,8 @@ def paths_shuffle(shape, income_params):
     return means
 
 
-  
-  
-    
 
-
-
-
-
-#Monte Carlo run throughs
+#Monte Carlo run throughs ----------------------------------------------------
 def monte_carlo_runs(m, n, lsoa_data, is_shuffled = None):
     startt = time.time()
     time_log = []  

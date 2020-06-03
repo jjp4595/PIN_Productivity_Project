@@ -33,6 +33,7 @@ def FileAddressList(fileIN, GaugeData=None):
     return OutputList
 
 
+
 paths_list = FileAddressList(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\Hosting\Scripts\paths\*.pkl"))
 
 
@@ -45,6 +46,13 @@ for i in range(len(paths_list)):
 paths = np.zeros((len(all_paths[0]), len(all_paths[0]), len(paths_list)))
 for i in range(len(paths_list)):
     paths[:,:,i] = all_paths[i].to_numpy()
+
+
+
+#replace the exceptions 1e8 with centroid distances. 
+centroid_distances = load_obj(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\Hosting\Scripts\obj\centroid_distances.pkl"))
+inds = np.where(paths==1e8)
+paths[inds] = centroid_distances[inds[0], inds[1]]
     
 ave_paths = paths.mean(2)
 
