@@ -5,9 +5,9 @@ Optimisation attempt
 
 import numpy as np
 import pickle
-from scipy.optimize import linprog, minimize, NonlinearConstraint, LinearConstraint
-import multiprocessing
-from synthetic_network import sample_attractivities
+from scipy.optimize import minimize
+
+
 
 
 def load_obj(name ):
@@ -19,6 +19,7 @@ def save_obj(obj, name ):
 
 
 # #1a) Directly run monte carlo
+#from synthetic_network import sample_attractivities
 # lsoa_data = load_obj("lsoa_data")
 # pop = np.asarray(lsoa_data['edu_counts']).reshape((len(lsoa_data['edu_counts']), 1))
 # pop = np.multiply(pop, np.transpose(pop))
