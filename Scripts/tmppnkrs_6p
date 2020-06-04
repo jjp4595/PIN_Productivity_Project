@@ -72,7 +72,7 @@ paths = paths[paths !=0]
 # def max_path(x, a1a2, pop, original_path):   
 #     return (np.max(x) - np.max(original_path)) *-1 #to make constraint non-negative
 
-# n = 250
+# n = 100
 
 # arguments = (opt_data['a1a2'][0:n], opt_data['pop'][0:n], paths[0:n])
 
@@ -85,36 +85,24 @@ paths = paths[paths !=0]
 # bnds = bnds * n
 
 # res = minimize(f, x0=paths[0:n], args=arguments, constraints = cons, bounds = bnds, method = 'trust-constr', options = {'disp':True, 'verbose':2})
-# sci_min = res['x']
+# opt_edges= res['x']
 #------------------------------------------------------------------------------
 
-# n=20
-# c = np.multiply(opt_data['a1a2'][0:n],opt_data['pop'][0:n])
+n=20
+c = np.multiply(opt_data['a1a2'][0:n],opt_data['pop'][0:n])
 
-# scale = 100
-# bnds = [((1*scale)/math.ceil(np.max(paths[0:n])) , 1*(scale)/math.floor(np.min(paths[0:n])))]
-# bnds = bnds * n
+scale = 100
+bnds = [((1*scale)/math.ceil(np.max(paths[0:n])) , 1*(scale)/math.floor(np.min(paths[0:n])))]
+bnds = bnds * n
 
-# res = linprog(-c, A_eq = np.ones((1,len(c))), b_eq = (1/np.sum(paths[0:n])), bounds=bnds)
-
-#-------
-def linprog_optmodel(n):
-    c = 1/np.multiply(opt_data['a1a2'][0:n],opt_data['pop'][0:n])
-    bnds = [(math.floor(np.min(paths[0:n])),math.ceil(np.max(paths[0:n])))]
-    bnds = bnds * n
-    Aub = np.full((1,n),1/len(paths[0:n]))
-    res = linprog(c, A_eq = np.ones((1,len(c))), b_eq = (np.sum(paths[0:n])), A_ub= Aub, b_ub = np.mean(paths[0:n]), bounds=bnds)
-    return res['x']
-import matplotlib.pyplot as plt
+res = linprog(-c, A_eq = np.ones((1,len(c))), b_eq = (1/np.sum(paths[0:n])), bounds=bnds)
 
 
-# ns = [100, 500, 1000, 2000, 2500, 3000, 3500, 4000]
-# fig, axs = plt.subplots(2,int(len(ns)/2))
-# axs = axs.ravel()
-# for i in range(len(ns)):
-#     new = paths[0:ns[i]]
-#     axs[i].hist(new, alpha=0.3)
-#     axs[i].hist(linprog_optmodel(ns[i]), alpha = 0.4)
-#     axs[i].set_title(str(ns[i]) + 'runs')
-# plt.tight_layout()
+n=5
 
+c = 1/np.multiply(opt_data['a1a2'][0:n],opt_data['pop'][0:n])
+
+bnds = [(math.floor(np.min(paths[0:n])),math.ceil(np.max(paths[0:n])))]
+bnds = bnds * n
+
+res = linprog(-c, A_eq = np.ones((1,len(c))), b_eq = (1/np.sum(paths[0:n])), bounds=bnds)

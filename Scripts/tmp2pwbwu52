@@ -117,4 +117,3 @@ import matplotlib.pyplot as plt
 #     axs[i].hist(linprog_optmodel(ns[i]), alpha = 0.4)
 #     axs[i].set_title(str(ns[i]) + 'runs')
 # plt.tight_layout()
-

@@ -108,13 +108,10 @@ def linprog_optmodel(n):
 import matplotlib.pyplot as plt
 
 
-# ns = [100, 500, 1000, 2000, 2500, 3000, 3500, 4000]
-# fig, axs = plt.subplots(2,int(len(ns)/2))
-# axs = axs.ravel()
-# for i in range(len(ns)):
-#     new = paths[0:ns[i]]
-#     axs[i].hist(new, alpha=0.3)
-#     axs[i].hist(linprog_optmodel(ns[i]), alpha = 0.4)
-#     axs[i].set_title(str(ns[i]) + 'runs')
-# plt.tight_layout()
 
+fig, [ax0, ax1] = plt.subplots(1,2, figsize=(10,5))
+ax0.hist(paths[0:n])
+ax0.set_title('Original Paths')
+ax1.hist(res['x'])
+ax1.set_title('Optimised paths')
+plt.tight_layout()

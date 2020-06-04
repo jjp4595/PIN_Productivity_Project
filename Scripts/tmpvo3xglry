@@ -98,23 +98,13 @@ paths = paths[paths !=0]
 # res = linprog(-c, A_eq = np.ones((1,len(c))), b_eq = (1/np.sum(paths[0:n])), bounds=bnds)
 
 #-------
-def linprog_optmodel(n):
-    c = 1/np.multiply(opt_data['a1a2'][0:n],opt_data['pop'][0:n])
-    bnds = [(math.floor(np.min(paths[0:n])),math.ceil(np.max(paths[0:n])))]
-    bnds = bnds * n
-    Aub = np.full((1,n),1/len(paths[0:n]))
-    res = linprog(c, A_eq = np.ones((1,len(c))), b_eq = (np.sum(paths[0:n])), A_ub= Aub, b_ub = np.mean(paths[0:n]), bounds=bnds)
-    return res['x']
-import matplotlib.pyplot as plt
+n=7500
 
+c = 1/np.multiply(opt_data['a1a2'][0:n],opt_data['pop'][0:n])
 
-# ns = [100, 500, 1000, 2000, 2500, 3000, 3500, 4000]
-# fig, axs = plt.subplots(2,int(len(ns)/2))
-# axs = axs.ravel()
-# for i in range(len(ns)):
-#     new = paths[0:ns[i]]
-#     axs[i].hist(new, alpha=0.3)
-#     axs[i].hist(linprog_optmodel(ns[i]), alpha = 0.4)
-#     axs[i].set_title(str(ns[i]) + 'runs')
-# plt.tight_layout()
+bnds = [(math.floor(np.min(paths[0:n])),math.ceil(np.max(paths[0:n])))]
+bnds = bnds * n
 
+Aub = 1/len(paths[0:n])
+
+res = linprog(c, A_eq = np.ones((1,len(c))), b_eq = (np.sum(paths[0:n])), bounds=bnds)
