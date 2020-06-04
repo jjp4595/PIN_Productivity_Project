@@ -18,20 +18,6 @@ import attractivity_modelling
 import fractal_working
 
 
-def sheff_import():
-    sheff_lsoa_shape = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\shapefiles\Sheffield_lsoa11.shp"))
-    sheff_lsoa_pop = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS101EW_lsoa11.csv"))
-    sheff_lsoa_pop['KS101EW0001'] = pd.to_numeric(sheff_lsoa_pop['KS101EW0001']) #Count: All categories:sex
-    sheff_lsoa_income = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Individual LSOA Income Estimate\E37000040\spatial\E37000040.shp"))
-    #LSOA Income data includes extra LSOA that are not in Sheffield City region, these should be removed.
-    ids = sheff_lsoa_income['lsoa11cd'].isin(sheff_lsoa_pop['GeographyCode'].values)
-    ids = np.where(ids==True)
-    sheff_lsoa_income = sheff_lsoa_income.iloc[ids]
-    sheff_lsoa_education = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS501EW_lsoa11.csv"))
-    return sheff_lsoa_shape, sheff_lsoa_pop, sheff_lsoa_income, sheff_lsoa_education
-sheff_lsoa_shape, sheff_lsoa_pop, sheff_lsoa_income, sheff_lsoa_education = sheff_import()
-
-
 def save_obj(obj, name ):
     with open('obj/'+ name + '.pkl', 'wb') as f:
         pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
@@ -41,59 +27,67 @@ def load_obj(name ):
         return pickle.load(f)
 
 
+#--------------Loading data ---------------------------------------------------
+def sheff_import():
+    sheff_lsoa = {}
+    sheff_lsoa['sheff_lsoa_shape'] = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\shapefiles\Sheffield_lsoa11.shp"))
+    sheff_lsoa['sheff_lsoa_pop'] = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS101EW_lsoa11.csv"))
+    sheff_lsoa['sheff_lsoa_pop']['KS101EW0001'] = pd.to_numeric(sheff_lsoa['sheff_lsoa_pop']['KS101EW0001']) #Count: All categories:sex
+    sheff_lsoa['sheff_lsoa_income'] = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Individual LSOA Income Estimate\E37000040\spatial\E37000040.shp"))
+    #LSOA Income data includes extra LSOA that are not in Sheffield City region, these should be removed.
+    ids = sheff_lsoa['sheff_lsoa_income']['lsoa11cd'].isin(sheff_lsoa['sheff_lsoa_pop']['GeographyCode'].values)
+    ids = np.where(ids==True)
+    sheff_lsoa['sheff_lsoa_income'] = sheff_lsoa['sheff_lsoa_income'].iloc[ids]
+    sheff_lsoa['sheff_lsoa_education'] = gpd.read_file(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\1 Data\1 Data\CDRC\Census Data Pack\Sheffield\tables\KS501EW_lsoa11.csv"))
+    return sheff_lsoa
+#sheff_lsoa = sheff_import()
+
 
 #Import script ro create attractivity distributions
-income_params, edu_counts, edu_ratios = attractivity_modelling.attractivity(sheff_lsoa_shape, sheff_lsoa_pop, sheff_lsoa_income, sheff_lsoa_education)
+#sheff_lsoa['income_params'], sheff_lsoa['edu_counts'], sheff_lsoa['edu_ratios'] = attractivity_modelling.attractivity(sheff_lsoa['sheff_lsoa_shape'], sheff_lsoa['sheff_lsoa_pop'], sheff_lsoa['sheff_lsoa_income'], sheff_lsoa['sheff_lsoa_education'])
+#Saving data 
+#save_obj(sheff_lsoa, "lsoa_data")
 
 # #Sense check distributions
 # import matplotlib.pyplot as plt
 # fig, axs = plt.subplots(15,23)
 # axs = axs.ravel()
-# for i in range(len(income_params)):
+# for i in range(len(sheff_lsoa['income_params'])):
 #     i
-#     r = stats.beta.rvs(income_params[i,0], income_params[i,1], loc =income_params[i,2], scale = income_params[i,3], size = 1000)
-#     axs[i].plot(np.linspace(0,1,100),  stats.beta.pdf(np.linspace(0,1,100), income_params[i, 0], income_params[i, 1], loc = income_params[i, 2], scale = income_params[i, 3]) , label = 'CDF')
+#     r = stats.beta.rvs(sheff_lsoa['income_params'][i,0], sheff_lsoa['income_params'][i,1], loc =sheff_lsoa['income_params'][i,2], scale = sheff_lsoa['income_params'][i,3], size = 1000)
+#     axs[i].plot(np.linspace(0,1,100),  stats.beta.pdf(np.linspace(0,1,100), sheff_lsoa['income_params'][i, 0], sheff_lsoa['income_params'][i, 1], loc = sheff_lsoa['income_params'][i, 2], scale = sheff_lsoa['income_params'][i, 3]) , label = 'CDF')
 #     axs[i].hist(r, density = True)
 # plt.tight_layout()
 
 # fig, axs = plt.subplots(15,23)
 # axs = axs.ravel()
-# for i in range(len(income_params)):
-#     education=np.random.choice(4, size = edu_counts[i], p=edu_ratios[i]) #where p values are effectively the ratio of people with a given education level you can alternatively use the same method for income as well    
+# for i in range(len(sheff_lsoa['income_params'])):
+#     education=np.random.choice(4, size = sheff_lsoa['edu_counts'][i], p=sheff_lsoa['edu_ratios'][i]) #where p values are effectively the ratio of people with a given education level you can alternatively use the same method for income as well    
 #     axs[i].hist(education, density = True)
 # plt.tight_layout()
 
 
-
-
-
-
-
-#Saving data 
-lsoa_dist = {"sheff_shape":sheff_lsoa_shape, "income_params":income_params, "edu_counts":edu_counts, "edu_ratios":edu_ratios}
-save_obj(lsoa_dist, "lsoa_data")
-
+#------------------------------------------------------------------------------
  
                                 
 
 #Sampling attractivities --------------------------------------
-def sample_attractivities(oa, edu_ratios, income_params):  
+def sample_attractivities(edu_ratios, income_params, fit = None):  
 
-    attractivity1 = np.zeros((len(oa)))
-    attractivity2 = np.zeros((len(oa)))
-    for i in range(len(oa)): #Loop across  OAs            
+    attractivity1 = np.zeros((len(income_params)))
+    attractivity2 = np.zeros((len(income_params)))
+    for i in range(len(income_params)): #Loop across  OAs            
         attractivity1[i] = attractivity_modelling.attractivity_sampler(i, edu_ratios, income_params)                     
         attractivity2[i] = attractivity_modelling.attractivity_sampler(i, edu_ratios, income_params)
         
-    
-    all_attractivity = np.concatenate((attractivity1, attractivity1) , axis=0)
-    attractivity_powerlaw = powerlaw.Fit(all_attractivity)
-    alpha = attractivity_powerlaw.alpha
-    xmin = attractivity_powerlaw.xmin
-    return attractivity1, attractivity2, alpha, xmin
-#attractivity1, attractivity2, alpha, xmin = sample_attractivities(s,idx, edu_ratios, income_params)
-
-
+    if fit != None:
+        all_attractivity = np.concatenate((attractivity1, attractivity1) , axis=0)
+        attractivity_powerlaw = powerlaw.Fit(all_attractivity)
+        alpha = attractivity_powerlaw.alpha
+        xmin = attractivity_powerlaw.xmin
+        return attractivity1, attractivity2, alpha, xmin
+    else:
+        return attractivity1, attractivity2
 
 def euclidean_dists_fun(sheff_shape): 
     """
@@ -177,12 +171,10 @@ def monte_carlo_runs(m, n, lsoa_data, is_shuffled = None):
     time_log = []  
     
     
-    s, idx, sheff_shape, income_params, edu_counts, edu_ratios = lsoa_data['s'], lsoa_data['idx'], lsoa_data['sheff_shape'], lsoa_data['income_params'], lsoa_data['edu_counts'], lsoa_data['edu_ratios']
-    
+    sheff_shape, income_params, edu_counts, edu_ratios = lsoa_data['sheff_lsoa_shape'], lsoa_data['income_params'], lsoa_data['edu_counts'], lsoa_data['edu_ratios']
     
     #Constants
     base_m = 0
-    
     
     #dummy distances
     euclidean_dists, centroids, paths_matrix, med_paths = euclidean_dists_fun(sheff_shape)
@@ -216,7 +208,7 @@ def monte_carlo_runs(m, n, lsoa_data, is_shuffled = None):
         
         
         #Sample attractivities
-        attractivity1, attractivity2, alpha, xmin = sample_attractivities(s,idx, edu_ratios, income_params)
+        attractivity1, attractivity2, alpha, xmin = sample_attractivities(edu_ratios, income_params, 1)
         
         
         theta = np.exp(np.log(xmin**2) - (base_m*np.log(eps)))
@@ -337,58 +329,58 @@ lsoa_data = load_obj("lsoa_data")
 # #----------------------------------------------------------------------------
 
 
-if __name__ == '__main__':
-    t1 = time.time()
-    no_scripts = multiprocessing.cpu_count()
+# if __name__ == '__main__':
+#     t1 = time.time()
+#     no_scripts = multiprocessing.cpu_count()
     
-    ms = [0, 0.5, 1, 1.25, 1.5, 1.75, 2, 2.25]
+#     ms = [0, 0.5, 1, 1.25, 1.5, 1.75, 2, 2.25]
 
 
-    args_normal = []
-    args_shuffled = []
+#     args_normal = []
+#     args_shuffled = []
     
-    for i in range(len(ms)):
-        args_normal.append((ms[i], 1000, lsoa_data))
-        args_shuffled.append((ms[i], 1000, lsoa_data, 1))
+#     for i in range(len(ms)):
+#         args_normal.append((ms[i], 1000, lsoa_data))
+#         args_shuffled.append((ms[i], 1000, lsoa_data, 1))
     
-    with multiprocessing.Pool(processes=no_scripts) as pool:
-        output = pool.starmap(monte_carlo_runs, args_normal)
+#     with multiprocessing.Pool(processes=no_scripts) as pool:
+#         output = pool.starmap(monte_carlo_runs, args_normal)
            
-    UrbanYs, edge_freqs, edge_widths = [], [], []
-    for i in range(len(output)):
-        UrbanYs.append(output[i][0])
-        edge_freqs.append(output[i][1])
-        edge_widths.append(output[i][2])
+#     UrbanYs, edge_freqs, edge_widths = [], [], []
+#     for i in range(len(output)):
+#         UrbanYs.append(output[i][0])
+#         edge_freqs.append(output[i][1])
+#         edge_widths.append(output[i][2])
 
 
-    normal = {
-        "UrbanYs": UrbanYs,
-        "edge_freqs": edge_freqs,
-        "edge_widths": edge_widths,
-        "m_values": ms
-        }    
+#     normal = {
+#         "UrbanYs": UrbanYs,
+#         "edge_freqs": edge_freqs,
+#         "edge_widths": edge_widths,
+#         "m_values": ms
+#         }    
 
-    save_obj(normal, "normal")
+#     save_obj(normal, "normal")
     
     
-    with multiprocessing.Pool(processes=no_scripts) as pool:
-        output = pool.starmap(monte_carlo_runs, args_shuffled)
+#     with multiprocessing.Pool(processes=no_scripts) as pool:
+#         output = pool.starmap(monte_carlo_runs, args_shuffled)
     
-    UrbanYs, edge_freqs, edge_widths = [], [], []
-    for i in range(len(output)):
-        UrbanYs.append(output[i][0])
-        edge_freqs.append(output[i][1])
-        edge_widths.append(output[i][2])
+#     UrbanYs, edge_freqs, edge_widths = [], [], []
+#     for i in range(len(output)):
+#         UrbanYs.append(output[i][0])
+#         edge_freqs.append(output[i][1])
+#         edge_widths.append(output[i][2])
 
 
-    shuffled = {
-        "UrbanYs": UrbanYs,
-        "edge_freqs": edge_freqs,
-        "edge_widths": edge_widths,
-        "m_values": ms
-        }        
+#     shuffled = {
+#         "UrbanYs": UrbanYs,
+#         "edge_freqs": edge_freqs,
+#         "edge_widths": edge_widths,
+#         "m_values": ms
+#         }        
     
-    save_obj(shuffled, "shuffled")
-    print(time.time()-t1)
+#     save_obj(shuffled, "shuffled")
+#     print(time.time()-t1)
 #----------------------------------------------------------------------------
 
