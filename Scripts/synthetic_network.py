@@ -8,10 +8,13 @@ import os
 import geopandas as gpd
 from scipy import stats
 import scipy.optimize
-import multiprocessing
+
 import time
 import powerlaw
 import pickle
+import seaborn as sns
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 
 #my scripts
 import attractivity_modelling
@@ -43,30 +46,197 @@ def sheff_import():
 #sheff_lsoa = sheff_import()
 
 
-#Import script ro create attractivity distributions
-#sheff_lsoa['income_params'], sheff_lsoa['edu_counts'], sheff_lsoa['edu_ratios'] = attractivity_modelling.attractivity(sheff_lsoa['sheff_lsoa_shape'], sheff_lsoa['sheff_lsoa_pop'], sheff_lsoa['sheff_lsoa_income'], sheff_lsoa['sheff_lsoa_education'])
-#Saving data 
-#save_obj(sheff_lsoa, "lsoa_data")
+#Graphing
+params = {'font.family':'serif',
+        'axes.labelsize':'small',
+        'xtick.labelsize':'x-small',
+        'ytick.labelsize':'x-small', 
+        'axes.linewidth':0.5,
+        
+        'xtick.major.width':0.5,
+        'xtick.minor.width':0.4,
+        'ytick.major.width':0.5,
+        'ytick.minor.width':0.4,
+        'xtick.major.size':3.0,
+        'xtick.minor.size':1.5,
+        'ytick.major.size':3.0,
+        'ytick.minor.size':1.5,
+        
+        'legend.fontsize':'small',
+        'legend.title_fontsize':'small',
+        'legend.fancybox': False,
+        'legend.framealpha': 1,
+        'legend.shadow': False,
+        'legend.frameon': True,
+        'legend.edgecolor':'black',
+        'patch.linewidth':0.5,
+        
+        'scatter.marker': 's',
+        
+        'grid.linewidth':'0.5',
+        
+        'lines.linewidth':'0.5'}
+plt.rcParams.update(params)
 
-# #Sense check distributions
-# import matplotlib.pyplot as plt
-# fig, axs = plt.subplots(15,23)
-# axs = axs.ravel()
-# for i in range(len(sheff_lsoa['income_params'])):
-#     i
-#     r = stats.beta.rvs(sheff_lsoa['income_params'][i,0], sheff_lsoa['income_params'][i,1], loc =sheff_lsoa['income_params'][i,2], scale = sheff_lsoa['income_params'][i,3], size = 1000)
-#     axs[i].plot(np.linspace(0,1,100),  stats.beta.pdf(np.linspace(0,1,100), sheff_lsoa['income_params'][i, 0], sheff_lsoa['income_params'][i, 1], loc = sheff_lsoa['income_params'][i, 2], scale = sheff_lsoa['income_params'][i, 3]) , label = 'CDF')
-#     axs[i].hist(r, density = True)
-# plt.tight_layout()
 
-# fig, axs = plt.subplots(15,23)
-# axs = axs.ravel()
-# for i in range(len(sheff_lsoa['income_params'])):
-#     education=np.random.choice(4, size = sheff_lsoa['edu_counts'][i], p=sheff_lsoa['edu_ratios'][i]) #where p values are effectively the ratio of people with a given education level you can alternatively use the same method for income as well    
-#     axs[i].hist(education, density = True)
-# plt.tight_layout()
+def income_edu_dists():
+    
+    #Graphing data
+    lsoa_data = load_obj("lsoa_data")
+    #Sense check distributions
+    
+    # fig, axs = plt.subplots(15,23)
+    # axs = axs.ravel()
+    # for i in range(len(lsoa_data['income_params'])):
+    #     i
+    #     r = stats.beta.rvs(lsoa_data['income_params'][i,0], lsoa_data['income_params'][i,1], loc =lsoa_data['income_params'][i,2], scale = lsoa_data['income_params'][i,3], size = 1000)
+    #     axs[i].plot(np.linspace(0,1,100),  stats.beta.pdf(np.linspace(0,1,100), lsoa_data['income_params'][i, 0], lsoa_data['income_params'][i, 1], loc = lsoa_data['income_params'][i, 2], scale = lsoa_data['income_params'][i, 3]) , label = 'CDF')
+    #     axs[i].hist(r, density = True)
+    # plt.tight_layout()
+    
+    # fig, axs = plt.subplots(15,23)
+    # axs = axs.ravel()
+    # for i in range(len(lsoa_data['income_params'])):
+    #     education=np.random.choice(4, size = lsoa_data['edu_counts'][i], p=lsoa_data['edu_ratios'][i]) #where p values are effectively the ratio of people with a given education level you can alternatively use the same method for income as well    
+    #     axs[i].hist(education, density = True)
+    # plt.tight_layout()
+    sns.set_palette("deep")
+    sns.set_color_codes()
+    maxid, minid = 103, 337 #income means max/min lsoa id
 
 
+    fig=plt.figure()
+    fig.set_size_inches(2,3)
+    gs = gridspec.GridSpec(2, 1, height_ratios=[10,1], width_ratios=[1], wspace=0.25, hspace=0)
+    ax0 = fig.add_subplot(gs[0])
+    ax1 = fig.add_subplot(gs[1], sharex = ax0)
+    inc1 = stats.beta.rvs(lsoa_data['income_params'][minid,0], lsoa_data['income_params'][minid,1], loc =lsoa_data['income_params'][minid,2], scale = lsoa_data['income_params'][minid,3], size = 1000)
+    sns.distplot(inc1, color='b', kde=False, norm_hist=True, ax=ax0)
+    ax0.plot(np.linspace(0,1,100),  stats.beta.pdf(np.linspace(0,1,100), lsoa_data['income_params'][minid, 0], lsoa_data['income_params'][minid, 1], loc = lsoa_data['income_params'][minid, 2], scale = lsoa_data['income_params'][minid, 3]) , label = 'CDF')
+    ax0.axvline(x=np.median(inc1), ls='--', lw=2)
+    sns.pointplot(data = inc1, ci = 'sd', orient = 'h', scale=2, ax=ax1)
+    ax0.set_xlim(0,1)
+    ax0.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
+    ax1.tick_params(axis='both', which='both',left=False,labelleft = False)   
+    ax1.set_xlabel('Normalised income')
+    plt.tight_layout()
+    
+    fig=plt.figure()
+    fig.set_size_inches(2,3)
+    gs = gridspec.GridSpec(2, 1, height_ratios=[10,1], width_ratios=[1], wspace=0.25, hspace=0)
+    ax0 = fig.add_subplot(gs[0])
+    ax1 = fig.add_subplot(gs[1], sharex = ax0)
+    inc2 = stats.beta.rvs(lsoa_data['income_params'][maxid,0], lsoa_data['income_params'][maxid,1], loc =lsoa_data['income_params'][maxid,2], scale = lsoa_data['income_params'][maxid,3], size = 1000)
+    sns.distplot(inc2, color='b', kde=False, norm_hist=True, ax=ax0)
+    ax0.plot(np.linspace(0,1,100),  stats.beta.pdf(np.linspace(0,1,100), lsoa_data['income_params'][maxid, 0], lsoa_data['income_params'][maxid, 1], loc = lsoa_data['income_params'][maxid, 2], scale = lsoa_data['income_params'][maxid, 3]) , label = 'CDF')
+    ax0.axvline(x=np.median(inc2), ls='--', lw=2)
+    sns.pointplot(data = inc2, ci = 'sd', orient = 'h', scale=2, ax=ax1)
+    ax0.set_xlim(0,1)
+    ax0.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
+    ax1.tick_params(axis='both', which='both',left=False,labelleft = False)   
+    ax1.set_xlabel('Normalised income')
+    plt.tight_layout()
+   
+
+
+    
+    
+    fig, [ax0, ax1] = plt.subplots(1,2)
+    fig.set_size_inches(4,2.5)
+    edu1=np.random.choice(4, size = 1000, p=lsoa_data['edu_ratios'][minid]) #where p values are effectively the ratio of people with a given education level you can alternatively use the same method for income as well    
+    sns.countplot(edu1, color = 'b', ax=ax0)
+    ax0.set_ylabel('Count')
+    ax0.set_xlabel('Highest education level')
+    plt.tight_layout()
+    
+    edu2=np.random.choice(4, size = 1000, p=lsoa_data['edu_ratios'][maxid])
+    sns.countplot(edu2, color='b', ax=ax1)
+    ax1.set_ylabel('Count')
+    ax1.set_xlabel('Highest education level')
+    plt.tight_layout()
+    
+    attractivity1=inc1**(-edu1)   
+    attractivtiy1_powerlaw = powerlaw.Fit(attractivity1)
+    attractivtiy1_powerlaw_temp = powerlaw.Fit(attractivity1, xmin=1)
+    fig = plt.figure()
+    fig.set_size_inches(2.5,2.5)
+    powerlaw_plot=attractivtiy1_powerlaw_temp.plot_ccdf(original_data=True, color='b', marker='.', ms=2, lw=0, alpha=0.5)
+    X=attractivtiy1_powerlaw_temp.ccdf()
+    x=X[0][X[0]>=attractivtiy1_powerlaw.xmin]
+    y=[np.exp( (-(attractivtiy1_powerlaw.alpha-1)*(np.log(i)-np.log(attractivtiy1_powerlaw.xmin))+np.log(X[1][X[0]==attractivtiy1_powerlaw.xmin])) ) for i in x]
+    plt.plot(x, y, 'k')
+    plt.ylabel(r'$P(attractivity \geq x)$')
+    plt.xlabel(r'$attractivity$')
+    plt.tight_layout()
+    
+    attractivity2=inc2**(-edu2)   
+    attractivtiy2_powerlaw = powerlaw.Fit(attractivity2)
+    attractivtiy2_powerlaw_temp = powerlaw.Fit(attractivity2, xmin=1)
+    fig = plt.figure()
+    fig.set_size_inches(2.5,2.5)
+    powerlaw_plot=attractivtiy2_powerlaw_temp.plot_ccdf(original_data=True, color='b', marker='.', ms=2, lw=0, alpha=0.5)
+    X=attractivtiy2_powerlaw_temp.ccdf()
+    x=X[0][X[0]>=attractivtiy2_powerlaw.xmin]
+    y=[np.exp( (-(attractivtiy2_powerlaw.alpha-1)*(np.log(i)-np.log(attractivtiy2_powerlaw.xmin))+np.log(X[1][X[0]==attractivtiy2_powerlaw.xmin])) ) for i in x]
+    plt.plot(x, y, 'k')
+    plt.ylabel(r'$P(attractivity \geq x)$')
+    plt.xlabel(r'$attractivity$')
+    plt.tight_layout()
+    
+    paths_matrix = load_obj("ave_paths")
+    paths = paths_matrix.flatten()
+    centroid_info = load_obj("centroids_beta_params_centroiddists")
+    centroid_paths = np.vstack(centroid_info['euclidean_dists']).flatten()
+    
+    fig=plt.figure()
+    fig.set_size_inches(3,3)
+    gs = gridspec.GridSpec(2, 1, height_ratios=[10,1], width_ratios=[1], wspace=0.25, hspace=0)
+    ax0 = fig.add_subplot(gs[0])
+    ax1 = fig.add_subplot(gs[1], sharex = ax0)
+    sns.distplot(centroid_paths, color='b', kde=False,  ax=ax0)
+    ax0.axvline(x=np.median(centroid_paths), ls='--', lw=2)
+    sns.pointplot(data = centroid_paths, ci = 'sd', orient = 'h', scale=2, ax=ax1)
+    ax0.set_xlim(0,30000)
+    ax0.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
+    ax1.tick_params(axis='both', which='both',left=False,labelleft = False)   
+    ax1.set_xlabel('Centroid path distances')
+    plt.tight_layout()
+    
+    fig=plt.figure()
+    fig.set_size_inches(3,3)
+    gs = gridspec.GridSpec(2, 1, height_ratios=[10,1], width_ratios=[1], wspace=0.25, hspace=0)
+    ax0 = fig.add_subplot(gs[0])
+    ax1 = fig.add_subplot(gs[1], sharex = ax0)
+    sns.distplot(paths, color='b', kde=False,  ax=ax0)
+    ax0.axvline(x=np.median(paths), ls='--', lw=2)
+    sns.pointplot(data = paths, ci = 'sd', orient = 'h', scale=2, ax=ax1)
+    ax0.set_xlim(0,30000)
+    ax0.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
+    ax1.tick_params(axis='both', which='both',left=False,labelleft = False)   
+    ax1.set_xlabel('Driveable path distance')
+    plt.tight_layout()
+    
+    fig=plt.figure()
+    fig.set_size_inches(3,3)
+    gs = gridspec.GridSpec(2, 1, height_ratios=[10,1], width_ratios=[1], wspace=0.25, hspace=0)
+    ax0 = fig.add_subplot(gs[0])
+    ax1 = fig.add_subplot(gs[1], sharex = ax0)
+    diffs = abs(paths-centroid_paths)
+    sns.distplot(diffs, color='b', kde=False,  ax=ax0)
+    ax0.axvline(x=np.median(diffs), ls='--', lw=2)
+    sns.pointplot(data = diffs, ci = 'sd', orient = 'h', scale=2, ax=ax1)
+    ax0.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
+    ax0.set_xlim(0,7000)
+    ax1.tick_params(axis='both', which='both',left=False,labelleft = False)   
+    ax1.set_xlabel('Difference in distances')
+    plt.tight_layout()
+    
+def plotgraph():
+    import osmnx as ox
+    import path_querying
+    G1 = path_querying.load_graph()
+    ox.plot.plot_graph(G1, dpi = 600, node_color = 'None', fig_width=6, fig_height=6)
+    
 #------------------------------------------------------------------------------
  
                                 
@@ -166,7 +336,7 @@ def paths_shuffle(shape, income_params):
 
 
 #Monte Carlo run throughs ----------------------------------------------------
-def monte_carlo_runs(m, n, lsoa_data, is_shuffled = None):
+def monte_carlo_runs(m, n, lsoa_data, paths_matrix, is_shuffled=None):
     startt = time.time()
     time_log = []  
     
@@ -174,19 +344,13 @@ def monte_carlo_runs(m, n, lsoa_data, is_shuffled = None):
     sheff_shape, income_params, edu_counts, edu_ratios = lsoa_data['sheff_lsoa_shape'], lsoa_data['income_params'], lsoa_data['edu_counts'], lsoa_data['edu_ratios']
     
     #Constants
-    base_m = 0
+    base_m = 1
+    
     
     #dummy distances
-    euclidean_dists, centroids, paths_matrix, med_paths = euclidean_dists_fun(sheff_shape)
-    #eps = med_paths
-    
-    #actual distances
-    paths_matrix = load_obj("ave_paths")
-    paths = np.concatenate(paths_matrix, axis=0)
-    paths = paths[paths != 0]
-    med_paths = sorted(paths)
-    med_paths = int(med_paths[int(len(med_paths)/2)])    
+    euclidean_dists, centroids, centroid_paths_matrix, med_paths = euclidean_dists_fun(sheff_shape)
     eps = med_paths
+    
     
     if is_shuffled is None:
         pass 
@@ -209,7 +373,7 @@ def monte_carlo_runs(m, n, lsoa_data, is_shuffled = None):
         
         #Sample attractivities
         attractivity1, attractivity2, alpha, xmin = sample_attractivities(edu_ratios, income_params, 1)
-        
+        #alpha = 1.45653 #mean fixed alpha from 1000 runs
         
         theta = np.exp(np.log(xmin**2) - (base_m*np.log(eps)))
         dc = base_m * (alpha - 1)
@@ -235,7 +399,7 @@ def monte_carlo_runs(m, n, lsoa_data, is_shuffled = None):
         
         attractivity_product = np.matmul(attractivity1, attractivity2.transpose())
         
-        #ensure 0 on diagonal?        
+        #ensure 0 on diagonal?   
         connectivity = np.divide(attractivity_product, np.power(paths_matrix, m))
         connectivity[np.where(np.isinf(connectivity))[0], np.where(np.isinf(connectivity))[1]] = 0
         connectivity[np.diag_indices_from(connectivity)] = 0
@@ -253,10 +417,13 @@ def monte_carlo_runs(m, n, lsoa_data, is_shuffled = None):
             eta = (Df/6)
         
         #activity
-        activity = np.power(paths_matrix, eta)
+        paths_matrix_n = (paths_matrix - paths_matrix.min()) / (paths_matrix.max() - paths_matrix.min()) +1
+        activity = np.power(paths_matrix_n, eta)
         activity[np.where(np.isinf(activity))[0], np.where(np.isinf(activity))[1]] = 0
         
         UrbanY.append( 0.5 * np.sum(np.multiply(adjacency, activity)) )
+        #UrbanY.append( 0.5 * np.sum(adjacency)) 
+        
         
     #Creating network data
     edge_freq = np.count_nonzero(edges, axis = 2) / n      
@@ -280,107 +447,179 @@ def monte_carlo_runs(m, n, lsoa_data, is_shuffled = None):
 #                   Running Monte Carlo
 #
 #------------------------------------------------------------------------------
+import multiprocessing
+if __name__ == '__main__':
+    #imports
+    lsoa_data = load_obj("lsoa_data")
+    import scipy.io as sio 
+    mldata = sio.loadmat(r'C:\Users\cip18jjp\Dropbox\PIN\hadi_scripts\optimisedpaths.mat')#import new paths
+    n = 500
 
-
-#1a) Load data to run sims
-lsoa_data = load_obj("lsoa_data")
-
-
-#stability of montecarlo ---------------------------------------
-# ms = np.linspace(0,2,num=8)
-
-# UrbanYs = []
-# edge_freqs = []
-# edge_widths = []
-# for m in ms:
-#     UrbanY, edge_freq, edge_width = monte_carlo_runs(m, 1000, lsoa_data)
-#     UrbanYs.append(UrbanY)
-#     edge_freqs.append(edge_freq)
-#     edge_width = (edge_width - edge_width.min()) / (edge_width.max() - edge_width.min())
-#     edge_widths.append(edge_width)
-
-# normal = {
-#     "UrbanYs": UrbanYs,
-#     "edge_freqs": edge_freqs,
-#     "edge_widths": edge_widths,
-#     "m_values": ms
-#     }
-# save_obj(normal, "normal_ms_0_2_9res_1000run")
-
-
-# UrbanYs = []
-# edge_freqs = []
-# edge_widths = []
-# for m in ms:
-#     UrbanY, edge_freq, edge_width = monte_carlo_runs(m, 1000, lsoa_data, is_shuffled = 1)
-#     UrbanYs.append(UrbanY)
-#     edge_freqs.append(edge_freq)
-#     edge_width = (edge_width - edge_width.min()) / (edge_width.max() - edge_width.min())
-#     edge_widths.append(edge_width)
-
-# shuffled = {
-#     "UrbanYs": UrbanYs,
-#     "edge_freqs": edge_freqs,
-#     "edge_widths": edge_widths,
-#     "m_values": ms
-#     }
-# save_obj(shuffled, "shuffled_ms_0_2_9res_1000run")
-
-# #----------------------------------------------------------------------------
-
-
-# if __name__ == '__main__':
-#     t1 = time.time()
-#     no_scripts = multiprocessing.cpu_count()
+    # 2a)--------------------------------------
+    # Normal paths, m = [0.5, 1, 2]
+    # -----------------------------------------
     
-#     ms = [0, 0.5, 1, 1.25, 1.5, 1.75, 2, 2.25]
-
-
-#     args_normal = []
-#     args_shuffled = []
     
-#     for i in range(len(ms)):
-#         args_normal.append((ms[i], 1000, lsoa_data))
-#         args_shuffled.append((ms[i], 1000, lsoa_data, 1))
+    t1 = time.time()
+    no_scripts = multiprocessing.cpu_count()
     
-#     with multiprocessing.Pool(processes=no_scripts) as pool:
-#         output = pool.starmap(monte_carlo_runs, args_normal)
+    ms = [0.5, 1, 2]
+    
+    paths_matrix = load_obj("ave_paths")
+    args_normal = []
+    
+    for i in range(len(ms)):
+        args_normal.append((ms[i], n, lsoa_data, paths_matrix))
+    
+    with multiprocessing.Pool(processes=no_scripts) as pool:
+        output = pool.starmap(monte_carlo_runs, args_normal)
            
-#     UrbanYs, edge_freqs, edge_widths = [], [], []
-#     for i in range(len(output)):
-#         UrbanYs.append(output[i][0])
-#         edge_freqs.append(output[i][1])
-#         edge_widths.append(output[i][2])
-
-
-#     normal = {
-#         "UrbanYs": UrbanYs,
-#         "edge_freqs": edge_freqs,
-#         "edge_widths": edge_widths,
-#         "m_values": ms
-#         }    
-
-#     save_obj(normal, "normal")
+    UrbanYs, edge_freqs, edge_widths = [], [], []
+    for i in range(len(output)):
+        UrbanYs.append(output[i][0])
+        edge_freqs.append(output[i][1])
+        edge_widths.append(output[i][2])
     
+    normal = {
+        "UrbanYs": UrbanYs,
+        "edge_freqs": edge_freqs,
+        "edge_widths": edge_widths,
+        "m_values": ms
+        }    
     
-#     with multiprocessing.Pool(processes=no_scripts) as pool:
-#         output = pool.starmap(monte_carlo_runs, args_shuffled)
+    save_obj(normal, "normal_layout_"+str(n)+"run")
     
-#     UrbanYs, edge_freqs, edge_widths = [], [], []
-#     for i in range(len(output)):
-#         UrbanYs.append(output[i][0])
-#         edge_freqs.append(output[i][1])
-#         edge_widths.append(output[i][2])
+    print(time.time()-t1)
 
 
-#     shuffled = {
-#         "UrbanYs": UrbanYs,
-#         "edge_freqs": edge_freqs,
-#         "edge_widths": edge_widths,
-#         "m_values": ms
-#         }        
+    #3a)--------------------------------------
+    # #minmax paths, m = [0.5, 1, 2]
+    #-----------------------------------------
     
-#     save_obj(shuffled, "shuffled")
-#     print(time.time()-t1)
-#----------------------------------------------------------------------------
+    paths = mldata['minmax']
+    paths = np.reshape(paths, (len(paths)))
+    paths_matrix = np.zeros((345,345))
+    lowInds = np.tril_indices(345,k=-1)
+    highInds  = np.triu_indices(345, k=1)
+    paths_matrix[lowInds] = paths
+    paths_matrix = paths_matrix + paths_matrix.T - np.diag(paths_matrix)     
+    
+    t1 = time.time()
+    no_scripts = multiprocessing.cpu_count()
+    
+    ms = [0.5, 1, 2]
+
+
+    args_normal = []
+    
+    for i in range(len(ms)):
+        args_normal.append((ms[i], n, lsoa_data, paths_matrix))
+    
+    with multiprocessing.Pool(processes=no_scripts) as pool:
+        output = pool.starmap(monte_carlo_runs, args_normal)
+           
+    UrbanYs, edge_freqs, edge_widths = [], [], []
+    for i in range(len(output)):
+        UrbanYs.append(output[i][0])
+        edge_freqs.append(output[i][1])
+        edge_widths.append(output[i][2])
+
+    normal = {
+        "UrbanYs": UrbanYs,
+        "edge_freqs": edge_freqs,
+        "edge_widths": edge_widths,
+        "m_values": ms
+        }    
+    save_obj(normal, "minmax_layout_"+str(n)+"run")
+    
+    print(time.time()-t1)
+
+    #3b)--------------------------------------
+    # #slmin straightline paths, m = [0.5, 1, 2]
+    #-----------------------------------------
+    paths = mldata['slmin']
+    paths = np.reshape(paths, (len(paths)))
+    
+    paths_matrix = np.zeros((345,345))
+    lowInds = np.tril_indices(345,k=-1)
+    highInds  = np.triu_indices(345, k=1)
+    paths_matrix[lowInds] = paths
+    paths_matrix = paths_matrix + paths_matrix.T - np.diag(paths_matrix)     
+    
+    #monte carlo set up
+    t1 = time.time()
+    no_scripts = multiprocessing.cpu_count()
+    
+    ms = [0.5, 1, 2]
+
+
+    args_normal = []
+    
+    for i in range(len(ms)):
+        args_normal.append((ms[i], n, lsoa_data, paths_matrix))
+    
+    with multiprocessing.Pool(processes=no_scripts) as pool:
+        output = pool.starmap(monte_carlo_runs, args_normal)
+           
+    UrbanYs, edge_freqs, edge_widths = [], [], []
+    for i in range(len(output)):
+        UrbanYs.append(output[i][0])
+        edge_freqs.append(output[i][1])
+        edge_widths.append(output[i][2])
+
+
+    normal = {
+        "UrbanYs": UrbanYs,
+        "edge_freqs": edge_freqs,
+        "edge_widths": edge_widths,
+        "m_values": ms
+        }    
+
+    save_obj(normal, "slmin_layout_"+str(n)+"run")
+
+    print(time.time()-t1)
+
+
+    #3c)--------------------------------------
+    # #+- 50% paths, m = [0.5, 1, 2]
+    #-----------------------------------------
+    paths = mldata['od50']
+    paths = np.reshape(paths, (len(paths)))
+    
+    paths_matrix = np.zeros((345,345))
+    lowInds = np.tril_indices(345,k=-1)
+    highInds  = np.triu_indices(345, k=1)
+    paths_matrix[lowInds] = paths
+    paths_matrix = paths_matrix + paths_matrix.T - np.diag(paths_matrix)     
+    
+    #monte carlo set up
+    t1 = time.time()
+    no_scripts = multiprocessing.cpu_count()
+    
+    ms = [0.5, 1, 2]
+
+    args_normal = []
+    
+    for i in range(len(ms)):
+        args_normal.append((ms[i], n, lsoa_data, paths_matrix))
+    
+    with multiprocessing.Pool(processes=no_scripts) as pool:
+        output = pool.starmap(monte_carlo_runs, args_normal)
+           
+    UrbanYs, edge_freqs, edge_widths = [], [], []
+    for i in range(len(output)):
+        UrbanYs.append(output[i][0])
+        edge_freqs.append(output[i][1])
+        edge_widths.append(output[i][2])
+
+    normal = {
+        "UrbanYs": UrbanYs,
+        "edge_freqs": edge_freqs,
+        "edge_widths": edge_widths,
+        "m_values": ms
+        }    
+    save_obj(normal, "od50_layout_"+str(n)+"run")
+
+    print(time.time()-t1)
+#------------------------------------------------------------------------------
 
