@@ -14,7 +14,6 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import os
 import pandas as pd
 import scipy.io as sio
-import powerlaw
 
 def save_obj(obj, name ):
     with open('obj/'+ name + '.pkl', 'wb') as f:
@@ -83,12 +82,12 @@ def income_edu_dists():
     sns.set_color_codes()
     maxid, minid = 103, 337 #income means max/min lsoa id
 
-    #Income Distributions   
+
     fig=plt.figure()
-    fig.set_size_inches(4,3)
-    gs = gridspec.GridSpec(2, 2, height_ratios=[10,1], wspace=0.25, hspace=0)
+    fig.set_size_inches(2,3)
+    gs = gridspec.GridSpec(2, 1, height_ratios=[10,1], width_ratios=[1], wspace=0.25, hspace=0)
     ax0 = fig.add_subplot(gs[0])
-    ax1 = fig.add_subplot(gs[2], sharex = ax0)
+    ax1 = fig.add_subplot(gs[1], sharex = ax0)
     inc1 = stats.beta.rvs(lsoa_data['income_params'][minid,0], lsoa_data['income_params'][minid,1], loc =lsoa_data['income_params'][minid,2], scale = lsoa_data['income_params'][minid,3], size = 1000)
     sns.distplot(inc1, color='b', kde=False, norm_hist=True, ax=ax0)
     ax0.plot(np.linspace(0,1,100),  stats.beta.pdf(np.linspace(0,1,100), lsoa_data['income_params'][minid, 0], lsoa_data['income_params'][minid, 1], loc = lsoa_data['income_params'][minid, 2], scale = lsoa_data['income_params'][minid, 3]) , label = 'CDF')
@@ -98,24 +97,27 @@ def income_edu_dists():
     ax0.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
     ax1.tick_params(axis='both', which='both',left=False,labelleft = False)   
     ax1.set_xlabel('Normalised income')
-
-    ax2 = fig.add_subplot(gs[1])
-    ax3 = fig.add_subplot(gs[3], sharex = ax2)
-    inc2 = stats.beta.rvs(lsoa_data['income_params'][maxid,0], lsoa_data['income_params'][maxid,1], loc =lsoa_data['income_params'][maxid,2], scale = lsoa_data['income_params'][maxid,3], size = 1000)
-    sns.distplot(inc2, color='b', kde=False, norm_hist=True, ax=ax2)
-    ax2.plot(np.linspace(0,1,100),  stats.beta.pdf(np.linspace(0,1,100), lsoa_data['income_params'][maxid, 0], lsoa_data['income_params'][maxid, 1], loc = lsoa_data['income_params'][maxid, 2], scale = lsoa_data['income_params'][maxid, 3]) , label = 'CDF')
-    ax2.axvline(x=np.median(inc2), ls='--', lw=2)
-    sns.pointplot(data = inc2, ci = 'sd', orient = 'h', scale=2, ax=ax3)
-    ax2.set_xlim(0,1)
-    ax2.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
-    ax3.tick_params(axis='both', which='both',left=False,labelleft = False)   
-    ax3.set_xlabel('Normalised income')
     plt.tight_layout()
-    fig.savefig(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\Hosting\graphs\income_dists.pdf"), format = 'pdf')
+    
+    fig=plt.figure()
+    fig.set_size_inches(2,3)
+    gs = gridspec.GridSpec(2, 1, height_ratios=[10,1], width_ratios=[1], wspace=0.25, hspace=0)
+    ax0 = fig.add_subplot(gs[0])
+    ax1 = fig.add_subplot(gs[1], sharex = ax0)
+    inc2 = stats.beta.rvs(lsoa_data['income_params'][maxid,0], lsoa_data['income_params'][maxid,1], loc =lsoa_data['income_params'][maxid,2], scale = lsoa_data['income_params'][maxid,3], size = 1000)
+    sns.distplot(inc2, color='b', kde=False, norm_hist=True, ax=ax0)
+    ax0.plot(np.linspace(0,1,100),  stats.beta.pdf(np.linspace(0,1,100), lsoa_data['income_params'][maxid, 0], lsoa_data['income_params'][maxid, 1], loc = lsoa_data['income_params'][maxid, 2], scale = lsoa_data['income_params'][maxid, 3]) , label = 'CDF')
+    ax0.axvline(x=np.median(inc2), ls='--', lw=2)
+    sns.pointplot(data = inc2, ci = 'sd', orient = 'h', scale=2, ax=ax1)
+    ax0.set_xlim(0,1)
+    ax0.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
+    ax1.tick_params(axis='both', which='both',left=False,labelleft = False)   
+    ax1.set_xlabel('Normalised income')
+    plt.tight_layout()
 
-    #Education Distributions
+    
     fig, [ax0, ax1] = plt.subplots(1,2)
-    fig.set_size_inches(4,3)
+    fig.set_size_inches(4,2.5)
     edu1=np.random.choice(4, size = 1000, p=lsoa_data['edu_ratios'][minid]) #where p values are effectively the ratio of people with a given education level you can alternatively use the same method for income as well    
     sns.countplot(edu1, color = 'b', ax=ax0)
     ax0.set_ylabel('Count')
@@ -127,56 +129,59 @@ def income_edu_dists():
     ax1.set_ylabel('Count')
     ax1.set_xlabel('Highest education level')
     plt.tight_layout()
-    fig.savefig(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\Hosting\graphs\education_dists.pdf"), format = 'pdf')
     
-    #Attractivity graphs
-    fig, [ax0, ax1] = plt.subplots(1,2)
-    fig.set_size_inches(4,3)
     attractivity1=inc1**(-edu1)   
     attractivtiy1_powerlaw = powerlaw.Fit(attractivity1)
     attractivtiy1_powerlaw_temp = powerlaw.Fit(attractivity1, xmin=1)
-    powerlaw_plot=attractivtiy1_powerlaw_temp.plot_ccdf(original_data=True, color='b', marker='.', ms=2, lw=0, alpha=0.5, ax=ax0)
+    fig = plt.figure()
+    fig.set_size_inches(2.5,2.5)
+    powerlaw_plot=attractivtiy1_powerlaw_temp.plot_ccdf(original_data=True, color='b', marker='.', ms=2, lw=0, alpha=0.5)
     X=attractivtiy1_powerlaw_temp.ccdf()
     x=X[0][X[0]>=attractivtiy1_powerlaw.xmin]
     y=[np.exp( (-(attractivtiy1_powerlaw.alpha-1)*(np.log(i)-np.log(attractivtiy1_powerlaw.xmin))+np.log(X[1][X[0]==attractivtiy1_powerlaw.xmin])) ) for i in x]
-    ax0.plot(x, y, 'k')
-    ax0.set_ylabel(r'$P(attractivity \geq x)$')
-    ax0.set_xlabel(r'$attractivity$')
+    plt.plot(x, y, 'k')
+    plt.ylabel(r'$P(attractivity \geq x)$')
+    plt.xlabel(r'$attractivity$')
+    plt.tight_layout()
     
     attractivity2=inc2**(-edu2)   
     attractivtiy2_powerlaw = powerlaw.Fit(attractivity2)
     attractivtiy2_powerlaw_temp = powerlaw.Fit(attractivity2, xmin=1)
-    powerlaw_plot=attractivtiy2_powerlaw_temp.plot_ccdf(original_data=True, color='b', marker='.', ms=2, lw=0, alpha=0.5, ax=ax1)
+    fig = plt.figure()
+    fig.set_size_inches(2.5,2.5)
+    powerlaw_plot=attractivtiy2_powerlaw_temp.plot_ccdf(original_data=True, color='b', marker='.', ms=2, lw=0, alpha=0.5)
     X=attractivtiy2_powerlaw_temp.ccdf()
     x=X[0][X[0]>=attractivtiy2_powerlaw.xmin]
     y=[np.exp( (-(attractivtiy2_powerlaw.alpha-1)*(np.log(i)-np.log(attractivtiy2_powerlaw.xmin))+np.log(X[1][X[0]==attractivtiy2_powerlaw.xmin])) ) for i in x]
-    ax1.plot(x, y, 'k')
-    ax1.set_ylabel(r'$P(attractivity \geq x)$')
-    ax1.set_xlabel(r'$attractivity$')
+    plt.plot(x, y, 'k')
+    plt.ylabel(r'$P(attractivity \geq x)$')
+    plt.xlabel(r'$attractivity$')
     plt.tight_layout()
-    fig.savefig(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\Hosting\graphs\attractivity.pdf"), format = 'pdf')
     
-    #centroid/driveable path distributions
     paths_matrix = load_obj("ave_paths")
     paths = paths_matrix.flatten()
     centroid_info = load_obj("centroids_beta_params_centroiddists")
     centroid_paths = np.vstack(centroid_info['euclidean_dists']).flatten()
     
     fig=plt.figure()
-    fig.set_size_inches(6,3)
-    gs = gridspec.GridSpec(2, 3, height_ratios=[10,1], width_ratios=[1, 1, 1], wspace=0.35, hspace=0)
+    fig.set_size_inches(3,3)
+    gs = gridspec.GridSpec(2, 1, height_ratios=[10,1], width_ratios=[1], wspace=0.25, hspace=0)
     ax0 = fig.add_subplot(gs[0])
-    ax1 = fig.add_subplot(gs[3], sharex = ax0)
+    ax1 = fig.add_subplot(gs[1], sharex = ax0)
     sns.distplot(centroid_paths, color='b', kde=False,  ax=ax0)
     ax0.axvline(x=np.median(centroid_paths), ls='--', lw=2)
     sns.pointplot(data = centroid_paths, ci = 'sd', orient = 'h', scale=2, ax=ax1)
     ax0.set_xlim(0,30000)
     ax0.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
     ax1.tick_params(axis='both', which='both',left=False,labelleft = False)   
-    ax1.set_xlabel('Centroid path distances')    
-
-    ax0 = fig.add_subplot(gs[1])
-    ax1 = fig.add_subplot(gs[4], sharex = ax0)
+    ax1.set_xlabel('Centroid path distances')
+    plt.tight_layout()
+    
+    fig=plt.figure()
+    fig.set_size_inches(3,3)
+    gs = gridspec.GridSpec(2, 1, height_ratios=[10,1], width_ratios=[1], wspace=0.25, hspace=0)
+    ax0 = fig.add_subplot(gs[0])
+    ax1 = fig.add_subplot(gs[1], sharex = ax0)
     sns.distplot(paths, color='b', kde=False,  ax=ax0)
     ax0.axvline(x=np.median(paths), ls='--', lw=2)
     sns.pointplot(data = paths, ci = 'sd', orient = 'h', scale=2, ax=ax1)
@@ -184,24 +189,23 @@ def income_edu_dists():
     ax0.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
     ax1.tick_params(axis='both', which='both',left=False,labelleft = False)   
     ax1.set_xlabel('Driveable path distance')
-
-    ax0 = fig.add_subplot(gs[2])
-    ax1 = fig.add_subplot(gs[5], sharex = ax0)
-    diffs = paths-centroid_paths
-    neg_diffs = abs(diffs[diffs<0])
-    sns.distplot(neg_diffs, color='r', kde=False,  ax=ax0)
-    ax0.axvline(x=np.median(neg_diffs), ls='--', lw=2, c='r')
-    sns.pointplot(data = neg_diffs, ci = 'sd', orient = 'h', scale=2, color = 'r', ax=ax1)
-    pos_diffs=diffs[diffs>0]
-    sns.distplot(pos_diffs, color='b', kde=False,  ax=ax0)
-    ax0.axvline(x=np.median(pos_diffs), ls='--', lw=2)
-    sns.pointplot(data = pos_diffs, ci = 'sd', orient = 'h', scale=2, ax=ax1)   
+    plt.tight_layout()
+    
+    fig=plt.figure()
+    fig.set_size_inches(3,3)
+    gs = gridspec.GridSpec(2, 1, height_ratios=[10,1], width_ratios=[1], wspace=0.25, hspace=0)
+    ax0 = fig.add_subplot(gs[0])
+    ax1 = fig.add_subplot(gs[1], sharex = ax0)
+    diffs = abs(paths-centroid_paths)
+    sns.distplot(diffs, color='b', kde=False,  ax=ax0)
+    ax0.axvline(x=np.median(diffs), ls='--', lw=2)
+    sns.pointplot(data = diffs, ci = 'sd', orient = 'h', scale=2, ax=ax1)
     ax0.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
-    ax0.set_xlim(0,8000)
+    ax0.set_xlim(0,7000)
     ax1.tick_params(axis='both', which='both',left=False,labelleft = False)   
     ax1.set_xlabel('Difference in distances')
     plt.tight_layout()
-    fig.savefig(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\Hosting\graphs\driveable_centroids_paths.pdf"), format = 'pdf')
+
 
     
 def plotgraph():
