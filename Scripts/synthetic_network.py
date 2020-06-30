@@ -453,7 +453,7 @@ if __name__ == '__main__':
     lsoa_data = load_obj("lsoa_data")
     import scipy.io as sio 
     mldata = sio.loadmat(r'C:\Users\cip18jjp\Dropbox\PIN\hadi_scripts\optimisedpaths.mat')#import new paths
-    n = 500
+    n = 2000
 
     # 2a)--------------------------------------
     # Normal paths, m = [0.5, 1, 2]
@@ -463,7 +463,7 @@ if __name__ == '__main__':
     t1 = time.time()
     no_scripts = multiprocessing.cpu_count()
     
-    ms = [0.5, 1, 2]
+    ms = [0.5, 1, 1.5, 2]
     
     paths_matrix = load_obj("ave_paths")
     args_normal = []
@@ -507,7 +507,7 @@ if __name__ == '__main__':
     t1 = time.time()
     no_scripts = multiprocessing.cpu_count()
     
-    ms = [0.5, 1, 2]
+    
 
 
     args_normal = []
@@ -550,7 +550,7 @@ if __name__ == '__main__':
     t1 = time.time()
     no_scripts = multiprocessing.cpu_count()
     
-    ms = [0.5, 1, 2]
+    
 
 
     args_normal = []
@@ -596,7 +596,7 @@ if __name__ == '__main__':
     t1 = time.time()
     no_scripts = multiprocessing.cpu_count()
     
-    ms = [0.5, 1, 2]
+    
 
     args_normal = []
     
