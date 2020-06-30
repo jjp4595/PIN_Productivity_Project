@@ -62,23 +62,6 @@ def income_edu_dists():
     
     #Graphing data
     lsoa_data = load_obj("lsoa_data")
-    #Sense check distributions
-    
-    # fig, axs = plt.subplots(15,23)
-    # axs = axs.ravel()
-    # for i in range(len(lsoa_data['income_params'])):
-    #     i
-    #     r = stats.beta.rvs(lsoa_data['income_params'][i,0], lsoa_data['income_params'][i,1], loc =lsoa_data['income_params'][i,2], scale = lsoa_data['income_params'][i,3], size = 1000)
-    #     axs[i].plot(np.linspace(0,1,100),  stats.beta.pdf(np.linspace(0,1,100), lsoa_data['income_params'][i, 0], lsoa_data['income_params'][i, 1], loc = lsoa_data['income_params'][i, 2], scale = lsoa_data['income_params'][i, 3]) , label = 'CDF')
-    #     axs[i].hist(r, density = True)
-    # plt.tight_layout()
-    
-    # fig, axs = plt.subplots(15,23)
-    # axs = axs.ravel()
-    # for i in range(len(lsoa_data['income_params'])):
-    #     education=np.random.choice(4, size = lsoa_data['edu_counts'][i], p=lsoa_data['edu_ratios'][i]) #where p values are effectively the ratio of people with a given education level you can alternatively use the same method for income as well    
-    #     axs[i].hist(education, density = True)
-    # plt.tight_layout()
     sns.set_palette("deep")
     sns.set_color_codes()
     maxid, minid = 103, 337 #income means max/min lsoa id
@@ -189,11 +172,11 @@ def income_edu_dists():
     ax1 = fig.add_subplot(gs[5], sharex = ax0)
     diffs = paths-centroid_paths
     neg_diffs = abs(diffs[diffs<0])
-    sns.distplot(neg_diffs, color='r', kde=False,  ax=ax0)
+    sns.distplot(neg_diffs, color='r', kde=False, hist_kws=dict(alpha=0.5), ax=ax0)
     ax0.axvline(x=np.median(neg_diffs), ls='--', lw=2, c='r')
     sns.pointplot(data = neg_diffs, ci = 'sd', orient = 'h', scale=2, color = 'r', ax=ax1)
     pos_diffs=diffs[diffs>0]
-    sns.distplot(pos_diffs, color='b', kde=False,  ax=ax0)
+    sns.distplot(pos_diffs, color='b', kde=False, hist_kws=dict(alpha=0.5), ax=ax0)
     ax0.axvline(x=np.median(pos_diffs), ls='--', lw=2)
     sns.pointplot(data = pos_diffs, ci = 'sd', orient = 'h', scale=2, ax=ax1)   
     ax0.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
@@ -208,63 +191,64 @@ def plotgraph():
     import osmnx as ox
     import path_querying
     G1 = path_querying.load_graph()
-    ox.plot.plot_graph(G1, dpi = 600, node_color = 'None', fig_width=6, fig_height=6)
 
+    fig, ax = ox.plot.plot_graph(G1, dpi = 600, node_color = 'None', fig_width=6, fig_height=6)
+    fig.set_size_inches(4,4)
+    fig.savefig(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\Hosting\graphs\driveable_sheffield_graph.pdf"), format = 'pdf')
 
-def layoutgraphs():
-    from synthetic_network import paths_shuffle
-    centroid = lsoa_data['sheff_lsoa_shape'].centroid
-    nodesx = centroid.x.tolist()
-    nodesy = centroid.y.tolist()
-    nodesx = np.asarray(nodesx)
-    nodesy = np.asarray(nodesy)
-    east_inds = np.argsort(nodesx)
+#Old function to sense check the shuffling was doing as intended
+# def layoutgraphs():
+#     from synthetic_network import paths_shuffle
+#     centroid = lsoa_data['sheff_lsoa_shape'].centroid
+#     nodesx = centroid.x.tolist()
+#     nodesy = centroid.y.tolist()
+#     nodesx = np.asarray(nodesx)
+#     nodesy = np.asarray(nodesy)
+#     east_inds = np.argsort(nodesx)
     
     
-    means = paths_shuffle(lsoa_data['sheff_lsoa_shape'], lsoa_data['income_params'])
-    means = np.asarray(means)
+#     means = paths_shuffle(lsoa_data['sheff_lsoa_shape'], lsoa_data['income_params'])
+#     means = np.asarray(means)
     
-    means_norm = np.divide(np.subtract(means, means.min()),
-                                np.subtract(means.max(), means.min())) 
+#     means_norm = np.divide(np.subtract(means, means.min()),
+#                                 np.subtract(means.max(), means.min())) 
     
-    income_inds = np.argsort(means_norm) #sorting means 
+#     income_inds = np.argsort(means_norm) #sorting means 
     
 
-    #sense check
-    plt.scatter(nodesx[east_inds], means_norm[income_inds])
+#     #sense check
+#     plt.scatter(nodesx[east_inds], means_norm[income_inds])
     
     
-    cNorm  = colors.Normalize(vmin=0, vmax=np.max(means_norm))
-    scalarMap = cmx.ScalarMappable(norm=cNorm, cmap='gray')
-    # colorList = []
-    # for i in range(len(income_inds)):
-    #    colorList.append(scalarMap.to_rgba(means_norm[i]))
+#     cNorm  = colors.Normalize(vmin=0, vmax=np.max(means_norm))
+#     scalarMap = cmx.ScalarMappable(norm=cNorm, cmap='gray')
+#     # colorList = []
+#     # for i in range(len(income_inds)):
+#     #    colorList.append(scalarMap.to_rgba(means_norm[i]))
     
     
     
-    fig, [base2, base] = plt.subplots(1,2)
-    fig.set_size_inches(7,2.5)
-    lsoa_data['sheff_lsoa_shape'].plot(color='white', edgecolor='black', ax=base)
-    base.scatter(nodesx[east_inds], nodesy[east_inds], c=means_norm[income_inds], s=8., cmap='gray')
-    divider = make_axes_locatable(base)
-    cax = divider.append_axes("right", size="5%", pad=0.05)
-    plt.colorbar(scalarMap, cax=cax)
-    plt.tight_layout()
-    lsoa_data['sheff_lsoa_shape'].plot(color='white', edgecolor='black', ax=base2)
-    base2.scatter(nodesx, nodesy, c=means_norm, s=8., cmap='gray')
-    divider = make_axes_locatable(base2)
-    cax = divider.append_axes("right", size="5%", pad=0.05)
-    plt.colorbar(scalarMap, cax=cax)
-    #cax.set_ylabel('normalised income')
-    base.set_xticks([])
-    base.set_yticks([])
-    base2.set_xticks([])
-    base2.set_yticks([])
+#     fig, [base2, base] = plt.subplots(1,2)
+#     fig.set_size_inches(7,2.5)
+#     lsoa_data['sheff_lsoa_shape'].plot(color='white', edgecolor='black', ax=base)
+#     base.scatter(nodesx[east_inds], nodesy[east_inds], c=means_norm[income_inds], s=8., cmap='gray')
+#     divider = make_axes_locatable(base)
+#     cax = divider.append_axes("right", size="5%", pad=0.05)
+#     plt.colorbar(scalarMap, cax=cax)
+#     plt.tight_layout()
+#     lsoa_data['sheff_lsoa_shape'].plot(color='white', edgecolor='black', ax=base2)
+#     base2.scatter(nodesx, nodesy, c=means_norm, s=8., cmap='gray')
+#     divider = make_axes_locatable(base2)
+#     cax = divider.append_axes("right", size="5%", pad=0.05)
+#     plt.colorbar(scalarMap, cax=cax)
+#     #cax.set_ylabel('normalised income')
+#     base.set_xticks([])
+#     base.set_yticks([])
+#     base2.set_xticks([])
+#     base2.set_yticks([])
     
-    plt.tight_layout()
-    fig.savefig(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\reports\layouts.png"), dpi=100, format = 'png')
-
-
+#     plt.tight_layout()
+#     fig.savefig(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\reports\layouts.png"), dpi=100, format = 'png')
 
 #Creating network graphs
 def networkgraph(layout, m, ax_in):
@@ -330,31 +314,6 @@ def networkgraph(layout, m, ax_in):
     plt.colorbar(scalarMap, cax=cax)
 
 
-def density_ratio(first, second):#amended so it doesn't use a list comprehension and does an all-to-all matrix operation
-    first = first[:,np.newaxis]
-    ratios = first/second
-    ratios = ratios.flatten()
-    sorted_ratios = np.sort(ratios)
-    median_50 = sorted_ratios[int((len(ratios) * 0.5))]
-    ratio_25 = sorted_ratios[int((len(ratios) * 0.25))]
-    ratio_75 = sorted_ratios[int((len(ratios) * 0.75))]
-    mean, sigma = np.mean(ratios), np.std(ratios)
-    conf_int = stats.norm.interval(0.95, loc=mean, scale=sigma / np.sqrt(len(ratios)))
-    #fig, ax = plt.subplots(1,1)
-    #ax.hist(ratios, bins = 20 , density=True)
-    info = {
-        "sorted_ratios":sorted_ratios,
-        "median": median_50,
-        "25th":ratio_25, 
-        "75th":ratio_75,
-        "mean":mean,
-        "sigma":sigma, 
-        "conf_int":conf_int
-        }
-    
-    return info
-
-
 #Loading data ----------------------------------------------------------------
 lsoa_data = load_obj("lsoa_data")
 normal = load_obj("normal_layout_2000run")
@@ -394,7 +353,32 @@ fig.savefig(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\Hosting\grap
 #-----------------------------------------------------------------------------
 
 
+
+
 #Density ratios and productivity plot ----------------------------------------
+def density_ratio(first, second):#amended so it doesn't use a list comprehension and does an all-to-all matrix operation
+    first = first[:,np.newaxis]
+    ratios = first/second
+    ratios = ratios.flatten()
+    sorted_ratios = np.sort(ratios)
+    median_50 = sorted_ratios[int((len(ratios) * 0.5))]
+    ratio_25 = sorted_ratios[int((len(ratios) * 0.25))]
+    ratio_75 = sorted_ratios[int((len(ratios) * 0.75))]
+    mean, sigma = np.mean(ratios), np.std(ratios)
+    conf_int = stats.norm.interval(0.95, loc=mean, scale=sigma / np.sqrt(len(ratios)))
+    #fig, ax = plt.subplots(1,1)
+    #ax.hist(ratios, bins = 20 , density=True)
+    info = {
+        "sorted_ratios":sorted_ratios,
+        "median": median_50,
+        "25th":ratio_25, 
+        "75th":ratio_75,
+        "mean":mean,
+        "sigma":sigma, 
+        "conf_int":conf_int
+        }
+    
+    return info
 #Create density ratios
 normal['ratios'], minmax['ratios'], slmin['ratios'], od50['ratios'] = [], [], [], []
 base = np.asarray(normal['UrbanYs'][1])
@@ -411,39 +395,178 @@ for i in range(len(normal['m_values'])):
                                     'slmin':slmin['ratios'][i]['sorted_ratios'],
                                     'od50':od50['ratios'][i]['sorted_ratios']}))    
 
-fig, [ax0, ax1, ax2] = plt.subplots(3,1)
+fig, [ax0, ax1, ax2, ax3] = plt.subplots(4,1)
 fig.set_size_inches(6,8)
 ax0.set_title('m = 0.5')
 ax1.set_title('m = 1')
-ax2.set_title('m = 2')
+ax2.set_title('m = 1.5')
+ax3.set_title('m = 2')
 sns.boxplot(data = dfs[0], notch=True, showfliers=False, showmeans=True, palette = 'Blues', ax=ax0)
 sns.boxplot(data = dfs[1], notch=True, showfliers=False, showmeans=True, palette = 'Blues', ax=ax1)
 sns.boxplot(data = dfs[2], notch=True, showfliers=False, showmeans=True, palette = 'Blues', ax=ax2)
+sns.boxplot(data = dfs[3], notch=True, showfliers=False, showmeans=True, palette = 'Blues', ax=ax3)
 # sns.pointplot(data = dfs[0], ci = 'sd', orient = 'v', join = False, ax= ax0)
 # sns.pointplot(data = dfs[1], ci = 'sd', orient = 'v', join = False, ax= ax1)
 # sns.pointplot(data = dfs[2], ci = 'sd', orient = 'v', join = False, ax= ax2)
 ax0.axhline(y=dfs[0]['Normal'].median(), ls='--', lw=1.5)
 ax1.axhline(y=dfs[1]['Normal'].median(), ls='--', lw=1.5)
 ax2.axhline(y=dfs[2]['Normal'].median(), ls='--', lw=1.5)
+ax3.axhline(y=dfs[3]['Normal'].median(), ls='--', lw=1.5)
 ax0.axhline(y=dfs[0]['Normal'].mean(), ls='--', lw=1)
 ax1.axhline(y=dfs[1]['Normal'].mean(), ls='--', lw=1)
 ax2.axhline(y=dfs[2]['Normal'].mean(), ls='--', lw=1)
+ax3.axhline(y=dfs[3]['Normal'].mean(), ls='--', lw=1)
 plt.tight_layout()
+fig.savefig(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\Hosting\graphs\boxplots.pdf"), format = 'pdf')
 
-
+#Tables for median and means of distributions
 names = ['Normal', 'Minmax', 'slmin', 'od50']
 meds05 = np.around(np.asarray([normal['ratios'][0]['median'], minmax['ratios'][0]['median'], slmin['ratios'][0]['median'], od50['ratios'][0]['median']]), 2)
 meds1  = np.around(np.asarray([normal['ratios'][1]['median'], minmax['ratios'][1]['median'], slmin['ratios'][1]['median'], od50['ratios'][1]['median']]), 2)
-meds2  = np.around(np.asarray([normal['ratios'][2]['median'], minmax['ratios'][2]['median'], slmin['ratios'][2]['median'], od50['ratios'][2]['median']]), 2)
+meds1_5  = np.around(np.asarray([normal['ratios'][2]['median'], minmax['ratios'][2]['median'], slmin['ratios'][2]['median'], od50['ratios'][2]['median']]), 2)
+meds2  = np.around(np.asarray([normal['ratios'][3]['median'], minmax['ratios'][3]['median'], slmin['ratios'][3]['median'], od50['ratios'][3]['median']]), 2)
+
+
 means05 = np.around(np.asarray([normal['ratios'][0]['mean'], minmax['ratios'][0]['mean'], slmin['ratios'][0]['mean'], od50['ratios'][0]['mean']]), 2)
 means1  = np.around(np.asarray([normal['ratios'][1]['mean'], minmax['ratios'][1]['mean'], slmin['ratios'][1]['mean'], od50['ratios'][1]['mean']]), 2)
-means2  = np.around(np.asarray([normal['ratios'][2]['mean'], minmax['ratios'][2]['mean'], slmin['ratios'][2]['mean'], od50['ratios'][2]['mean']]), 2)
+means1_5  = np.around(np.asarray([normal['ratios'][2]['mean'], minmax['ratios'][2]['mean'], slmin['ratios'][2]['mean'], od50['ratios'][2]['mean']]), 2)
+means2  = np.around(np.asarray([normal['ratios'][3]['mean'], minmax['ratios'][3]['mean'], slmin['ratios'][3]['mean'], od50['ratios'][3]['mean']]), 2)
+
+
+
+def plotgraphs():
+    #load paths info
+    mldata = sio.loadmat('optimisedpaths.mat')
+    paths_matrix = load_obj("ave_paths")
+    paths = np.tril(paths_matrix) #lower half of od matrix
+    paths = np.ndarray.flatten(paths)
+    paths = paths[paths!=0]
+    
+    #------
+    fig = plt.figure()
+    fig.set_size_inches(4,3)
+    gs = gridspec.GridSpec(2,2, height_ratios=[10,1], wspace=0.35, hspace=0, figure = fig)
+    ax0 = fig.add_subplot(gs[0])
+    ax1 = fig.add_subplot(gs[2], sharex = ax0)
+    sns.distplot(mldata['minmax'], color='b', kde=False, ax=ax0)
+    ax0.set_xlim(0,30000)
+    ax0.axvline(x=np.median(mldata['minmax']), ls='--', lw=2)
+    sns.pointplot(data = mldata['minmax'], ci = 'sd', orient = 'h', scale=2, ax=ax1)
+    ax0.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
+    ax1.tick_params(axis='both', which='both',left=False,labelleft = False)   
+    ax1.set_xlabel('Path Distance')
+    plt.tight_layout()
+    
+    ax2 = fig.add_subplot(gs[1])
+    ax3 = fig.add_subplot(gs[3], sharex = ax2)
+    diffs = np.subtract(paths,mldata['minmax'].reshape(59340))
+    pos_diffs = diffs[diffs>0]
+    sns.distplot(pos_diffs, color='b', kde=False, label = 'Expansion', ax=ax2)
+    ax2.axvline(x=np.median(pos_diffs), ls='--', lw=2)
+    sns.pointplot(data = pos_diffs, ci = 'sd', orient = 'h', scale=2, ax=ax3)
+    neg_diffs = np.abs(diffs[diffs<0])
+    sns.distplot(neg_diffs, color='r', kde=False, label = 'Contraction', ax=ax2)
+    ax2.axvline(x=np.median(neg_diffs), ls='--', lw=2, color='r')
+    sns.pointplot(data = neg_diffs, ci = 'sd', orient = 'h', scale=2, color = 'r', ax=ax3)
+    ax2.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
+    ax2.set_xlim(0,30000)
+    ax3.tick_params(axis='both', which='both',left=False,labelleft = False)   
+    ax3.set_xlabel('Difference in distances')
+    handles, labels = ax2.get_legend_handles_labels()
+    ax2.legend(handles, labels, loc='upper right', prop={'size':6})
+    plt.tight_layout()
+    fig.savefig(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\Hosting\graphs\path_differences_minmax.pdf"), format = 'pdf')
+    
+    #------
+    fig = plt.figure()
+    fig.set_size_inches(4,3)
+    gs = gridspec.GridSpec(2,2, height_ratios=[10,1], wspace=0.35, hspace=0, figure = fig)
+    ax0 = fig.add_subplot(gs[0])
+    ax1 = fig.add_subplot(gs[2], sharex = ax0)
+    sns.distplot(mldata['slmin'], color='b', kde=False, ax=ax0)
+    ax0.set_xlim(0,30000)
+    ax0.axvline(x=np.median(mldata['slmin']), ls='--', lw=2)
+    sns.pointplot(data = mldata['slmin'], ci = 'sd', orient = 'h', scale=2, ax=ax1)
+    ax0.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
+    ax1.tick_params(axis='both', which='both',left=False,labelleft = False)   
+    ax1.set_xlabel('Path Distance')
+    plt.tight_layout()
+    ax2 = fig.add_subplot(gs[1])
+    ax3 = fig.add_subplot(gs[3], sharex = ax2)
+    diffs = np.subtract(paths,mldata['slmin'].reshape(59340))
+    pos_diffs = diffs[diffs>0]
+    sns.distplot(pos_diffs, color='b', kde=False, label = 'Expansion', ax=ax2)
+    ax2.axvline(x=np.median(pos_diffs), ls='--', lw=2)
+    sns.pointplot(data = pos_diffs, ci = 'sd', orient = 'h', scale=2, ax=ax3)
+    neg_diffs = np.abs(diffs[diffs<0])
+    sns.distplot(neg_diffs, color='r', kde=False, label = 'Contraction', ax=ax2)
+    ax2.axvline(x=np.median(neg_diffs), ls='--', lw=2, color='r')
+    sns.pointplot(data = neg_diffs, ci = 'sd', orient = 'h', scale=2, color = 'r', ax=ax3)
+    ax2.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
+    ax2.set_xlim(0,30000)
+    ax3.tick_params(axis='both', which='both',left=False,labelleft = False)   
+    ax3.set_xlabel('Difference in distances')
+    handles, labels = ax2.get_legend_handles_labels()
+    ax2.legend(handles, labels, loc='upper right', prop={'size':6})
+    plt.tight_layout()
+    fig.savefig(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\Hosting\graphs\path_differences_slmin.pdf"), format = 'pdf')
+    
+    #------    
+    fig = plt.figure()
+    fig.set_size_inches(4,3)
+    gs = gridspec.GridSpec(2,2, height_ratios=[10,1], wspace=0.35, hspace=0, figure = fig)
+    ax0 = fig.add_subplot(gs[0])
+    ax1 = fig.add_subplot(gs[2], sharex = ax0)
+    sns.distplot(mldata['od50'], color='b', kde=False, ax=ax0)
+    ax0.set_xlim(0,30000)
+    ax0.axvline(x=np.median(mldata['od50']), ls='--', lw=2)
+    sns.pointplot(data = mldata['od50'], ci = 'sd', orient = 'h', scale=2, ax=ax1)
+    ax0.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
+    ax1.tick_params(axis='both', which='both',left=False,labelleft = False)   
+    ax1.set_xlabel('Path Distance')
+    plt.tight_layout()
+    ax2 = fig.add_subplot(gs[1])
+    ax3 = fig.add_subplot(gs[3], sharex = ax2)
+    diffs = np.subtract(paths,mldata['od50'].reshape(59340))
+    pos_diffs = diffs[diffs>0]
+    sns.distplot(pos_diffs, color='b', kde=False, label = 'Expansion', ax=ax2)
+    ax2.axvline(x=np.median(pos_diffs), ls='--', lw=2)
+    sns.pointplot(data = pos_diffs, ci = 'sd', orient = 'h', scale=2, ax=ax3)
+    neg_diffs = np.abs(diffs[diffs<0])
+    sns.distplot(neg_diffs, color='r', kde=False, label = 'Contraction', ax=ax2)
+    ax2.axvline(x=np.median(neg_diffs), ls='--', lw=2, color='r')
+    sns.pointplot(data = neg_diffs, ci = 'sd', orient = 'h', scale=2, color = 'r', ax=ax3)
+    ax2.tick_params(axis='both', which='both',bottom=False, labelbottom=False)   
+    ax2.set_xlim(0,30000)
+    ax3.tick_params(axis='both', which='both',left=False,labelleft = False)   
+    ax3.set_xlabel('Difference in distances')
+    handles, labels = ax2.get_legend_handles_labels()
+    ax2.legend(handles, labels, loc='upper right', prop={'size':6})
+    plt.tight_layout()
+    fig.savefig(os.path.join(os.environ['USERPROFILE'] + r"\Dropbox\PIN\Hosting\graphs\path_differences_od50.pdf"), format = 'pdf')
+plotgraphs()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 #
 """
-Commented out all below as Hadi now has the dataframes and is making these graphs?
+Commented out all below as Hadi now has the dataframes and is finalising these graphs?
 """
 #-----------------------------------------------------------------------------
 
